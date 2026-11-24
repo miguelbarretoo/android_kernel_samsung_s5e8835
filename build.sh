@@ -10,7 +10,7 @@ Usage: $(basename "$0") [options]
 
 Options:
   -m, --model <name>       Target model (default: x1slte)
-  -k, --ksu <y|n>          Include KernelSU-Next (default: y)
+  -k, --ksu <y|n>          Include KernelSU-Next (default: n)
   -r, --recovery <y|n>     Build only recovery-side artifacts
   -d, --dtbs <y|n>         Build only Image/DTB artifacts, no boot ZIP
   -j, --jobs <count>       Parallel jobs (default: nproc)
@@ -18,7 +18,7 @@ EOF
 }
 
 MODEL="${MODEL:-x1slte}"
-KSU_OPTION="${KSU_OPTION:-y}"
+KSU_OPTION="${KSU_OPTION:-n}"
 RECOVERY_OPTION="${RECOVERY_OPTION:-n}"
 DTB_OPTION="${DTB_OPTION:-n}"
 JOBS="${JOBS:-$(nproc)}"
@@ -75,6 +75,11 @@ fi
 CLANG_DIR="${CLANG_DIR:-$ROOT_DIR/toolchain/clang_14}"
 if [[ -d "$CLANG_DIR/bin" ]]; then
 	export PATH="$CLANG_DIR/bin:$PATH"
+fi
+
+if command -v ld.lld >/dev/null 2>&1; then
+	LLVM_BIN="$(dirname "$(readlink -f "$(command -v ld.lld)")")"
+	export PATH="$LLVM_BIN:$PATH"
 fi
 
 command -v clang >/dev/null || {
