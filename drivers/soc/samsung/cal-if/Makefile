@@ -12,6 +12,8 @@ cmupmucal-$(CONFIG_SOC_S5E9925)		+= s5e9925/cal_data.o
 cmupmucal-$(CONFIG_SOC_S5E9935)         += s5e9935/cal_data.o
 cmupmucal-$(CONFIG_SOC_S5E8535)         += s5e8535/cal_data.o
 cmupmucal-$(CONFIG_SOC_S5E8835)         += s5e8835/cal_data.o
+cmupmucal-$(CONFIG_SOC_EXYNOS9830)      += exynos9830/cal_data.o
+cmupmucal-$(CONFIG_SOC_EXYNOS9830_EVT0) += exynos9830_evt0/cal_data.o
 cmupmucal-$(CONFIG_ACPM_DVFS)		+= acpm_dvfs.o fvmap.o
 cmupmucal-$(CONFIG_EXYNOS_DEBUG_FREQ)        += exynos_debug_freq.o
 

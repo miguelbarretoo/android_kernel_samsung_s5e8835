@@ -31,7 +31,7 @@ static inline int set_cmuewf(unsigned int index, unsigned int en)
 {
 	return 0;
 }
-static int early_wakeup_forced_enable_init(void)
+static inline int early_wakeup_forced_enable_init(void)
 {
 	return 0;
 }

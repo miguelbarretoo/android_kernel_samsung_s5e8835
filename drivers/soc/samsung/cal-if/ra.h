@@ -49,6 +49,8 @@ enum trans_opt {
 #define FIN_HZ			(26*MHZ)
 #elif IS_ENABLED(CONFIG_SOC_S5E8835)
 #define FIN_HZ			(52*MHZ)
+#elif IS_ENABLED(CONFIG_SOC_EXYNOS9830)
+#define FIN_HZ			(26*MHZ)
 #endif
 
 #define CLK_WAIT_CNT		1000

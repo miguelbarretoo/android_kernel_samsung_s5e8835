@@ -41,6 +41,7 @@ enum margin_id {
 	MARGIN_M2M,
 	MARGIN_INTG3D,
 	MARGIN_WLBT,
+	MARGIN_TNR,
 	MAX_MARGIN_ID,
 };
 

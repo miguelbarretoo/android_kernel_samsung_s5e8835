@@ -36,5 +36,12 @@ endif
 ifdef CONFIG_SOC_S5E8835
 clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += clk-s5e8835.o
 endif
+ifdef CONFIG_SOC_EXYNOS9830
+ifeq ($(CONFIG_SOC_EXYNOS9830_EVT0), y)
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += clk-exynos9830_evt0.o
+else
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += clk-exynos9830.o
+endif
+endif
 
 clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)	+= composite.o
