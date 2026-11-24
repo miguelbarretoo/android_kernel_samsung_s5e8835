@@ -22,4 +22,7 @@
 #define SCHED_POLICY_EXPRESS		6	/* task express */
 #define NUM_OF_SCHED_POLICY		7
 
+/* Legacy scheduler class selector used by the Exynos 990 vendor DT. */
+#define EMS_SCHED_FAIR		(1 << 3)
+
 #endif /* __EXYNOS_MOBILE_SCHEDULER__ */

@@ -25,6 +25,14 @@
 #define EP_TYPE_QC_WIFI			(1 << 20)
 #define EP_TYPE_SAMSUNG_WIFI		(1 << 21)
 
+/* Legacy Exynos 990 vendor DT sources use the older endpoint numbering. */
+#define EP_NO_DEVICE			0
+#define EP_BCM_WIFI			1
+#define EP_SAMSUNG_S359			2
+#define EP_QC_MODEM			3
+#define EP_SAMSUNG_MODEM			4
+#define EP_QC_WIFI			5
+
 /*
  * CAUTION - It SHOULD fit Target Link Speed Encoding
  * in Link Control2 Register(offset 0xA0)

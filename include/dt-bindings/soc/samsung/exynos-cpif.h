@@ -53,6 +53,20 @@
 #define INTERRUPT_GPIO		1
 #define INTERRUPT_MAX		2
 
+/* Legacy Exynos 990 link attribute bits. */
+#define LINK_ATTR_MASK_SBD_IPC		(0x1 << 0)
+#define LINK_ATTR_MASK_IPC_ALIGNED	(0x1 << 1)
+#define LINK_ATTR_MASK_IOSM_MESSAGE	(0x1 << 2)
+#define LINK_ATTR_MASK_DPRAM_MAGIC	(0x1 << 3)
+#define LINK_ATTR_MASK_SBD_BOOT		(0x1 << 4)
+#define LINK_ATTR_MASK_SBD_DUMP		(0x1 << 5)
+#define LINK_ATTR_MASK_MEM_BOOT		(0x1 << 6)
+#define LINK_ATTR_MASK_MEM_DUMP		(0x1 << 7)
+#define LINK_ATTR_MASK_BOOT_ALIGNED	(0x1 << 8)
+#define LINK_ATTR_MASK_DUMP_ALIGNED	(0x1 << 9)
+#define LINK_ATTR_MASK_XMIT_BTDLR	(0x1 << 10)
+#define LINK_ATTR_MASK_XMIT_BTDLR_SPI	(0x1 << 11)
+
 /* Control msg type */
 #define CMSG_TYPE_NONE		0
 #define MAILBOX_SR		1
