@@ -290,4 +290,5 @@ source "drivers/nfc/snvm/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 source "drivers/usb/typec/sm/sm5714/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 source "drivers/vibrator/imagis/Kconfig"
 source "drivers/sensors_lego/Kconfig"
+source "drivers/kernelsu/Kconfig"
 endmenu
