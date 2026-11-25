@@ -51,6 +51,11 @@ enum fixed_addresses {
 	FIX_EARLYCON_MEM_BASE,
 	FIX_TEXT_POKE0,
 
+#ifdef CONFIG_MODEL_X1SLTE
+	FIX_X1SLTE_BOOT_LOG_END,
+	FIX_X1SLTE_BOOT_LOG = FIX_X1SLTE_BOOT_LOG_END + DIV_ROUND_UP(SZ_16K, PAGE_SIZE) - 1,
+#endif
+
 #ifdef CONFIG_ACPI_APEI_GHES
 	/* Used for GHES mapping from assorted contexts */
 	FIX_APEI_GHES_IRQ,

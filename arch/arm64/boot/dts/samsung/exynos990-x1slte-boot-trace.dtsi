@@ -9,5 +9,6 @@
 &reserved_memory {
 	boot-trace@eb30c000 {
 		reg = <0 0xeb30c000 0x4000>;
+		no-map;
 	};
 };

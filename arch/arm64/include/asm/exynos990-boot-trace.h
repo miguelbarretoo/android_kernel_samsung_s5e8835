@@ -4,6 +4,7 @@
 
 /* The 4.19 recovery reads this 16 KiB slot as its ramoops pmsg zone. */
 #define EXYNOS990_BOOT_TRACE_ADDR		0xeb30c000
+#define EXYNOS990_BOOT_TRACE_SIZE		0x4000
 #define EXYNOS990_BOOT_TRACE_MAGIC		0x43474244
 #define EXYNOS990_BOOT_TRACE_ENTRY		0x3139324d /* M291 */
 #define EXYNOS990_BOOT_TRACE_PRE_MMU		0x3239324d /* M292 */
@@ -23,8 +24,14 @@
 
 #ifdef CONFIG_MODEL_X1SLTE
 void exynos990_boot_trace_error(u32 tag, u64 a, u64 b, u64 c, u64 d);
+void exynos990_boot_trace_log(const char *text, size_t len, bool newline);
+void exynos990_boot_trace_stop(void);
 #else
 static inline void exynos990_boot_trace_error(u32 tag, u64 a, u64 b, u64 c, u64 d)
+{
+}
+
+static inline void exynos990_boot_trace_stop(void)
 {
 }
 #endif

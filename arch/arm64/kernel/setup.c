@@ -25,6 +25,7 @@
 #include <linux/fs.h>
 #include <linux/panic_notifier.h>
 #include <linux/proc_fs.h>
+#include <linux/atomic.h>
 #include <linux/libfdt.h>
 #include <linux/memblock.h>
 #include <linux/of_fdt.h>
@@ -305,74 +306,110 @@ u64 cpu_logical_map(unsigned int cpu)
 }
 
 #ifdef CONFIG_MODEL_X1SLTE
-#define EXYNOS990_TRACE_MAP_SIZE	48
+/* Match the 4.19 persistent RAM header: signature, write index, used bytes. */
+#define EXYNOS990_TRACE_CAPACITY	(EXYNOS990_BOOT_TRACE_SIZE - 3 * sizeof(u32))
 
 static u32 __iomem *exynos990_trace_map;
-static bool exynos990_trace_armed;
+static atomic_t exynos990_trace_busy = ATOMIC_INIT(0);
+static bool exynos990_trace_has_error;
+static u32 exynos990_trace_pos;
+static u32 exynos990_trace_used;
 
 static __always_inline void exynos990_trace_word(u32 __iomem *mark, u32 value)
 {
 	WRITE_ONCE(*(u32 __force *)mark, cpu_to_le32(value));
 }
 
-static __always_inline void exynos990_trace_value(u32 __iomem *mark, u64 value)
-{
-	exynos990_trace_word(mark, lower_32_bits(value));
-	exynos990_trace_word(mark + 1, upper_32_bits(value));
-}
-
-void noinstr exynos990_boot_trace_error(u32 tag, u64 a, u64 b, u64 c, u64 d)
+static __always_inline void exynos990_trace_append(const char *text, size_t len,
+						  bool newline, bool error)
 {
 	u32 __iomem *mark = READ_ONCE(exynos990_trace_map);
+	char __force *ring;
+	u32 pos, used;
+	size_t i, count = len + newline;
 
-	if (!mark || !READ_ONCE(exynos990_trace_armed))
+	if (!mark || !count)
 		return;
 
-	/* Keep the first error, and avoid recursion if recording itself faults. */
-	WRITE_ONCE(exynos990_trace_armed, false);
-	exynos990_trace_word(mark, 0);
-	exynos990_trace_word(mark + 1, 36);
-	exynos990_trace_word(mark + 2, 36);
-	exynos990_trace_word(mark + 3, tag);
-	exynos990_trace_value(mark + 4, a);
-	exynos990_trace_value(mark + 6, b);
-	exynos990_trace_value(mark + 8, c);
-	exynos990_trace_value(mark + 10, d);
+	/* printk and exception entry must never wait for a nested writer. */
+	if (__ll_sc__cmpxchg_case_acq_32(&exynos990_trace_busy.counter, 0, 1))
+		return;
+	if (unlikely(!READ_ONCE(exynos990_trace_map)))
+		goto unlock;
+	if (error) {
+		if (exynos990_trace_has_error)
+			goto unlock;
+		exynos990_trace_has_error = true;
+	}
+
+	ring = (char __force *)(mark + 3);
+	pos = exynos990_trace_pos;
+	used = min_t(size_t, exynos990_trace_used + count, EXYNOS990_TRACE_CAPACITY);
+	for (i = 0; i < count; i++) {
+		WRITE_ONCE(ring[pos], i < len ? text[i] : '\n');
+		if (++pos == EXYNOS990_TRACE_CAPACITY)
+			pos = 0;
+	}
+	exynos990_trace_pos = pos;
+	exynos990_trace_used = used;
+
 	dsb(sy);
-	exynos990_trace_word(mark, EXYNOS990_BOOT_TRACE_MAGIC);
+	exynos990_trace_word(mark + 1, pos);
+	exynos990_trace_word(mark + 2, used);
 	dsb(sy);
+unlock:
+	smp_store_release(&exynos990_trace_busy.counter, 0);
+}
+
+void noinstr __attribute__((no_stack_protector))
+exynos990_boot_trace_error(u32 tag, u64 a, u64 b, u64 c, u64 d)
+{
+	const __le32 record[] = {
+		cpu_to_le32(tag),
+		cpu_to_le32(lower_32_bits(a)), cpu_to_le32(upper_32_bits(a)),
+		cpu_to_le32(lower_32_bits(b)), cpu_to_le32(upper_32_bits(b)),
+		cpu_to_le32(lower_32_bits(c)), cpu_to_le32(upper_32_bits(c)),
+		cpu_to_le32(lower_32_bits(d)), cpu_to_le32(upper_32_bits(d)),
+	};
+
+	exynos990_trace_append((const char *)record, sizeof(record), true, true);
+}
+
+void exynos990_boot_trace_log(const char *text, size_t len, bool newline)
+{
+	exynos990_trace_append(text, len, newline, false);
+}
+
+void exynos990_boot_trace_stop(void)
+{
+	WRITE_ONCE(exynos990_trace_map, NULL);
 }
 #endif
 
 static void __init exynos990_boot_mark_setup_arch(void)
 {
 #ifdef CONFIG_MODEL_X1SLTE
-	void __iomem *mark;
+	u32 __iomem *mark;
+	unsigned int offset;
 
-	mark = early_ioremap(EXYNOS990_BOOT_TRACE_ADDR, EXYNOS990_TRACE_MAP_SIZE);
-	if (!mark)
-		return;
+	for (offset = 0; offset < EXYNOS990_BOOT_TRACE_SIZE; offset += PAGE_SIZE)
+		__set_fixmap(FIX_X1SLTE_BOOT_LOG - offset / PAGE_SIZE,
+			     (EXYNOS990_BOOT_TRACE_ADDR & PAGE_MASK) + offset,
+			     FIXMAP_PAGE_IO);
+	mark = (u32 __iomem *)(fix_to_virt(FIX_X1SLTE_BOOT_LOG) +
+			      offset_in_page(EXYNOS990_BOOT_TRACE_ADDR));
 
-	writel_relaxed(0, mark);
-	writel_relaxed(4, mark + 4);
-	writel_relaxed(4, mark + 8);
-	writel_relaxed(EXYNOS990_BOOT_TRACE_SETUP_ARCH, mark + 12);
+	exynos990_trace_word(mark, 0);
+	exynos990_trace_word(mark + 1, 4);
+	exynos990_trace_word(mark + 2, 4);
+	exynos990_trace_word(mark + 3, EXYNOS990_BOOT_TRACE_SETUP_ARCH);
 	dsb(sy);
-	writel_relaxed(EXYNOS990_BOOT_TRACE_MAGIC, mark);
+	exynos990_trace_word(mark, EXYNOS990_BOOT_TRACE_MAGIC);
 	dsb(sy);
+	exynos990_trace_pos = 4;
+	exynos990_trace_used = 4;
 	WRITE_ONCE(exynos990_trace_map, mark);
-	WRITE_ONCE(exynos990_trace_armed, true);
-#endif
-}
-
-static void __init exynos990_boot_trace_stop(void)
-{
-#ifdef CONFIG_MODEL_X1SLTE
-	WRITE_ONCE(exynos990_trace_armed, false);
-	if (exynos990_trace_map) {
-		early_iounmap(exynos990_trace_map, EXYNOS990_TRACE_MAP_SIZE);
-		WRITE_ONCE(exynos990_trace_map, NULL);
-	}
+	exynos990_boot_trace_log("", 0, true);
 #endif
 }
 
@@ -439,7 +476,6 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 
 	request_standard_resources();
 
-	exynos990_boot_trace_stop();
 	early_ioremap_reset();
 
 	if (acpi_disabled)

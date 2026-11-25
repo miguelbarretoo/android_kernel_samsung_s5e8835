@@ -50,6 +50,9 @@
 
 #include <linux/uaccess.h>
 #include <asm/sections.h>
+#ifdef CONFIG_MODEL_X1SLTE
+#include <asm/exynos990-boot-trace.h>
+#endif
 
 #include <trace/events/initcall.h>
 #define CREATE_TRACE_POINTS
@@ -2250,6 +2253,10 @@ int vprintk_store(int facility, int level,
 		if (prb_reserve_in_last(&e, prb, &r, caller_id, LOG_LINE_MAX)) {
 			text_len = printk_sprint(&r.text_buf[r.info->text_len], reserve_size,
 						 facility, &flags, fmt, args);
+#ifdef CONFIG_MODEL_X1SLTE
+			exynos990_boot_trace_log(r.text_buf + r.info->text_len,
+						text_len, flags & LOG_NEWLINE);
+#endif
 			r.info->text_len += text_len;
 
 			if (flags & LOG_NEWLINE) {
@@ -2292,6 +2299,11 @@ int vprintk_store(int facility, int level,
 	r.info->caller_id = caller_id;
 	if (dev_info)
 		memcpy(&r.info->dev_info, dev_info, sizeof(r.info->dev_info));
+
+#ifdef CONFIG_MODEL_X1SLTE
+	exynos990_boot_trace_log(r.text_buf, text_len + trunc_msg_len,
+				flags & LOG_NEWLINE);
+#endif
 
 	/* A message without a trailing newline can be continued. */
 	if (!(flags & LOG_NEWLINE))

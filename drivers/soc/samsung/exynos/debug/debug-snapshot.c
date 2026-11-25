@@ -23,6 +23,10 @@
 #include <linux/mutex.h>
 #include <linux/atomic.h>
 
+#ifdef CONFIG_MODEL_X1SLTE
+#include <asm/exynos990-boot-trace.h>
+#endif
+
 #include <trace/hooks/logbuf.h>
 
 #include <soc/samsung/exynos-smc.h>
@@ -1484,6 +1488,10 @@ static int dbg_snapshot_probe(struct platform_device *pdev)
 	sec_log_init();
 
 	dev_info(&pdev->dev, "%s successful.\n", __func__);
+#ifdef CONFIG_MODEL_X1SLTE
+	if (dbg_snapshot_get_item_enable(DSS_ITEM_KERNEL))
+		exynos990_boot_trace_stop();
+#endif
 	return 0;
 }
 
