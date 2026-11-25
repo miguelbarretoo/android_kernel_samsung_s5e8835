@@ -119,6 +119,11 @@ if [[ "$KSU_OPTION" == n ]]; then
 	scripts/config --file "$BUILD_OUT/.config" --disable KSU
 fi
 "${MAKE_ARGS[@]}" olddefconfig
+if [[ "$MODEL" == x1slte ]]; then
+        scripts/config --file "$BUILD_OUT/.config" --enable EXYNOS_EL2 --enable EXYNOS_S2MPU --enable EXYNOS_PM --enable EXYNOS_CHIPID_V2 --enable PINCTRL_SAMSUNG
+        scripts/config --file "$BUILD_OUT/.config" --disable USB_DWC3_EXYNOS_MODULE --disable CP_PMUCAL --disable GNSS_PMUCAL --disable CHUB_PMUCAL --disable SCHED_EMS --disable MUIC_NOTIFIER --disable EXYNOS_ARM64_COMMON_CLK --disable SND_SOC_SAMSUNG_ABOX --disable SND_SOC_SAMSUNG_VTS --disable SND_SOC_SAMSUNG_EXYNOS8835_AUDIO
+fi
+
 
 if [[ "$DTB_OPTION" == y ]]; then
 	BUILD_TARGETS=(dtbs)

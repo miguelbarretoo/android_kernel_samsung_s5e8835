@@ -18,6 +18,7 @@
 
 #include "../../soc/samsung/cal-if/exynos9830/cmucal-vclk.h"
 #include "../../soc/samsung/cal-if/exynos9830/cmucal-node.h"
+bool clk_exynos_skip_hw;
 #include "../../soc/samsung/cal-if/exynos9830/cmucal-qch.h"
 #include "../../soc/samsung/cal-if/exynos9830/clkout_exynos9830.h"
 #include "composite.h"

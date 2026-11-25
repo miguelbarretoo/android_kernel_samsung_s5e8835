@@ -13,7 +13,7 @@ config SEC_MODEM_S5000AP
 	select CP_SECURE_BOOT
 	select MCU_IPC
 	select SHM_IPC
-	select CP_PMUCAL
+	select CP_PMUCAL if !SOC_EXYNOS9830
 	select CPIF_MEMORY_LOGGER
 	select CPIF_PAGE_RECYCLING
 	select SBD_BOOTLOG

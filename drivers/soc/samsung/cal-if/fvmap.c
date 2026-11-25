@@ -551,12 +551,14 @@ int fvmap_init(void __iomem *sram_base)
 		pr_err("Fail to create percent_margin group\n");
 
 	kobj = kobject_create_and_add("asv-g", kernel_kobj);
+#if IS_ENABLED(CONFIG_SEC_FACTORY)
 	if (!kobj)
 		pr_err("Fail to create asv-g kboject\n");
 
 	if (sysfs_create_group(kobj, &asv_g_spec_grp))
 		pr_err("Fail to create asv_g_spec group\n");
 
+#endif
 	return 0;
 }
 EXPORT_SYMBOL_GPL(fvmap_init);

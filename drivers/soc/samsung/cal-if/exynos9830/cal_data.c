@@ -31,7 +31,7 @@
 
 #include <soc/samsung/exynos-cpupm.h>
 
-#if defined(CONFIG_SEC_DEBUG)
+#if IS_ENABLED(CONFIG_SEC_FACTORY)
 #include <soc/samsung/exynos-pm.h>
 #endif
 
@@ -72,6 +72,10 @@ void __iomem *ccmu_cpucl2;
 void __iomem *dll_apm_base;
 void __iomem *sysreg_apm_base;
 void __iomem *cmu_apm_base;
+
+/* The Exynos 990 CAL has no fractional-RPLL table in this tree. */
+unsigned int frac_rpll_list[1];
+unsigned int frac_rpll_size;
 
 static int cmu_stable_done(void __iomem *cmu,
 			unsigned char shift,
@@ -311,8 +315,14 @@ void exynos9830_cal_data_init(void)
 }
 
 void (*cal_data_init)(void) = exynos9830_cal_data_init;
+bool is_ignore_cmu_dbg(u32 addr)
+{
+    (void)addr;
+    return false;
+}
 
-#if defined(CONFIG_SEC_DEBUG)
+
+#if IS_ENABLED(CONFIG_SEC_FACTORY)
 int asv_ids_information(enum ids_info id)
 {
 	int res;

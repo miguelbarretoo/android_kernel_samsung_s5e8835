@@ -75,7 +75,7 @@ void  samsung_clk_of_add_provider(struct device_node *np,
 }
 
 /* add a clock instance to the clock lookup table used for dt based lookup */
-static void samsung_clk_add_lookup(struct samsung_clk_provider *ctx, struct clk *clk,
+void samsung_clk_add_lookup(struct samsung_clk_provider *ctx, struct clk *clk,
 					unsigned int id)
 {
 	if (ctx->clk_data.clks && id)

@@ -475,6 +475,7 @@ SYM_FUNC_END(__primary_switched)
 
 	.pushsection ".rodata", "a"
 SYM_DATA_START(kimage_vaddr)
+.balign 8
 	.quad		_text
 SYM_DATA_END(kimage_vaddr)
 EXPORT_SYMBOL(kimage_vaddr)
