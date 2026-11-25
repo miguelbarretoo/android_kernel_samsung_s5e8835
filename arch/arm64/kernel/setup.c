@@ -320,6 +320,23 @@ static __always_inline void exynos990_trace_word(u32 __iomem *mark, u32 value)
 	WRITE_ONCE(*(u32 __force *)mark, cpu_to_le32(value));
 }
 
+static __always_inline bool exynos990_trace_trylock(void)
+{
+	unsigned int busy;
+
+	/* A single attempt is enough: an exception may interrupt the writer. */
+	asm volatile("ldaxr %w0, %1\n"
+		     "cbnz %w0, 1f\n"
+		     "stxr %w0, %w2, %1\n"
+		     "b 2f\n"
+		     "1: clrex\n"
+		     "2:"
+		     : "=&r" (busy), "+Q" (exynos990_trace_busy.counter)
+		     : "r" (1)
+		     : "memory");
+	return !busy;
+}
+
 static __always_inline void exynos990_trace_append(const char *text, size_t len,
 						  bool newline, bool error)
 {
@@ -332,7 +349,7 @@ static __always_inline void exynos990_trace_append(const char *text, size_t len,
 		return;
 
 	/* printk and exception entry must never wait for a nested writer. */
-	if (__ll_sc__cmpxchg_case_acq_32(&exynos990_trace_busy.counter, 0, 1))
+	if (!exynos990_trace_trylock())
 		return;
 	if (unlikely(!READ_ONCE(exynos990_trace_map)))
 		goto unlock;
@@ -410,6 +427,8 @@ static void __init exynos990_boot_mark_setup_arch(void)
 	exynos990_trace_used = 4;
 	WRITE_ONCE(exynos990_trace_map, mark);
 	exynos990_boot_trace_log("", 0, true);
+	pr_info("x1slte early printk capture active, FDT at 0x%llx\n",
+		(unsigned long long)__fdt_pointer);
 #endif
 }
 
