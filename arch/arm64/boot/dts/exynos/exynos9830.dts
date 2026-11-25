@@ -3446,6 +3446,7 @@
 
 	s2mpu {
 		compatible = "samsung,exynos-s2mpu";
+		memory_region = <&s2mpu_table>;
 		instance-num = <34>;
 		instance-names = "aud",
 				 "csis_d0",

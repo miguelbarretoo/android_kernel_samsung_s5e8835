@@ -139,7 +139,7 @@
 			reg = <0 SECLOG_LOG_BUF_BASE SECLOG_LOG_BUF_TOTAL_SIZE>;
 		};
 
-		s2mpu_table {
+		s2mpu_table: s2mpu_table {
 			compatible = "exynos,s2mpu_table";
 			reg = <0 S2MPU_TABLE_BASE S2MPU_TABLE_SIZE>;
 		};

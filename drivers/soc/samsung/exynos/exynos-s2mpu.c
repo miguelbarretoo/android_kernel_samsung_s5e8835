@@ -1221,9 +1221,16 @@ static int __init exynos_s2mpu_init(void)
 	}
 
 	rmem_np = of_parse_phandle(np, "memory_region", 0);
+	if (!rmem_np) {
+		pr_err("%s: missing or invalid S2MPU memory_region\n", __func__);
+		of_node_put(np);
+		return -EADDRNOTAVAIL;
+	}
 	rmem = of_reserved_mem_lookup(rmem_np);
+	of_node_put(rmem_np);
 	if (!rmem) {
 		pr_err("%s: fail to acquire memory region\n", __func__);
+		of_node_put(np);
 		return -EADDRNOTAVAIL;
 	}
 
