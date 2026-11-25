@@ -153,8 +153,19 @@ cp "$BUILD_OUT/arch/arm64/boot/Image" "$PACKAGE_OUT/Image"
 if [[ "$RECOVERY_OPTION" != y ]]; then
 	RAMDISK="$PACKAGE_OUT/ramdisk.cpio.gz"
 	(
-		cd build/ramdisk
-		find . ! -name . | LC_ALL=C sort | cpio -o -H newc -R root:root | gzip > "$RAMDISK"
+		RAMDISK_ROOT="$(mktemp -d)"
+		trap 'rm -r -- "$RAMDISK_ROOT"' EXIT
+		FSTAB=build/ramdisk/fstab.exynos990
+		[[ "$MODEL" == x1slte ]] && FSTAB=build/ramdisk/fstab.x1slte
+
+		install -d -m 0755 "$RAMDISK_ROOT"/{dev,proc,sys,mnt,debug_ramdisk}
+		install -m 0750 build/ramdisk/init "$RAMDISK_ROOT/init"
+		install -m 0640 "$FSTAB" "$RAMDISK_ROOT/fstab.exynos990"
+		cd "$RAMDISK_ROOT"
+		find . -mindepth 1 -exec touch -h -d '@0' {} +
+		find . -mindepth 1 -print0 | LC_ALL=C sort -z |
+			cpio --null --reproducible -o -H newc -R root:root |
+			gzip -n > "$RAMDISK"
 	)
 
 	./toolchain/mkbootimg \
