@@ -34,9 +34,13 @@
 #include <linux/phy/phy-usb.h>
 
 #include "usb.h"
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 #include "../host/xhci-exynos-audio.h"
+#endif
 
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 extern struct xhci_exynos_audio *g_xhci_exynos_audio;
+#endif
 #define PHY_MODE_SUSPEND_BYPASS		0x35
 #define PHY_MODE_RESUME_BYPASS		0x36
 
@@ -1412,8 +1416,10 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 	int			status = 0;
 	int			i = 0, n = 0;
 	struct usb_interface	*intf;
+	#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	struct usb_device	*hdev;
 	int			bypass;
+	#endif
 
 	if (!udev || !udev->bus || !udev->bus->root_hub) {
 		pr_info("%s: bypass udev 0\n", __func__);
@@ -1424,6 +1430,7 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 			udev->state == USB_STATE_SUSPENDED)
 		goto done;
 
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	hdev = udev->bus->root_hub;
 
 	if (!g_xhci_exynos_audio->hcd) {
@@ -1442,6 +1449,7 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 
 	if (bypass)
 		goto done;
+#endif
 
 main:
 	/* Suspend all the interfaces and then udev itself */
@@ -1540,8 +1548,10 @@ static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 	int			status = 0;
 	int			i;
 	struct usb_interface	*intf;
+	#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	struct usb_device	*hdev;
 	int			bypass;
+	#endif
 
 	if (!udev || !udev->bus || !udev->bus->root_hub) {
 		pr_info("%s: bypass udev 0\n", __func__);
@@ -1556,6 +1566,7 @@ static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 		goto done;
 	}
 
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	hdev = udev->bus->root_hub;
 
 	if (!g_xhci_exynos_audio->hcd) {
@@ -1573,6 +1584,7 @@ static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 
 	if (bypass)
 		goto done;
+#endif
 
 main:
 	udev->can_submit = 1;

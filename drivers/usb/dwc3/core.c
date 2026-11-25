@@ -1762,9 +1762,11 @@ static int dwc3_probe(struct platform_device *pdev)
 	if (ret)
 		goto err5;
 
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	ret = xhci_exynos_audio_alloc(dev);
 	if (ret < 0)
 		dev_err(dev, "xhci_exynos_audio_alloc failed\n");
+#endif
 
 	pm_runtime_put(dev);
 

@@ -48,6 +48,15 @@
 #define EXYNOS_URAM_DCBAA_ADDR          0x13303880
 #define EXYNOS_URAM_ABOX_ERST_SEG_ADDR  0x13303C80
 #endif
+
+#endif
+
+#ifndef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+static inline int xhci_exynos_sync_dev_ctx(struct xhci_hcd *xhci,
+		unsigned int slot_id)
+{
+	return 0;
+}
 #endif
 
 

@@ -22,7 +22,9 @@
 #define	PORT_RWC_BITS	(PORT_CSC | PORT_PEC | PORT_WRC | PORT_OCC | \
 			 PORT_RC | PORT_PLC | PORT_PE)
 
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 extern struct xhci_exynos_audio *g_xhci_exynos_audio;
+#endif
 
 /* Default sublink speed attribute of each lane */
 static u32 ssp_cap_default_ssa[] = {
@@ -1821,10 +1823,12 @@ retry:
 	else
 		main_hcd = 0;
 
+	#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	pr_info("%s\n", __func__);
 	if (!(xhci->xhc_state & XHCI_STATE_REMOVING))
 		phy_set_mode_ext(g_xhci_exynos_audio->phy,
 				 PHY_MODE_BUS_SUSPEND, main_hcd);
+	#endif
 
 	return 0;
 }
@@ -1977,10 +1981,12 @@ int xhci_bus_resume(struct usb_hcd *hcd)
 	else
 		main_hcd = 0;
 
+	#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	pr_info("%s\n", __func__);
 	if (!(xhci->xhc_state & XHCI_STATE_REMOVING))
 		phy_set_mode_ext(g_xhci_exynos_audio->phy,
 				 PHY_MODE_BUS_RESUME, main_hcd);
+	#endif
 
 	return 0;
 }

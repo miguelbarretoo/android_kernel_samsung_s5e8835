@@ -2500,8 +2500,10 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	int		i, ret;
 
 	INIT_LIST_HEAD(&xhci->cmd_list);
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	pr_info("%s: set uram!\n", __func__);
 	xhci->quirks |= XHCI_USE_URAM_FOR_EXYNOS_AUDIO;
+#endif
 
 	/* init command timeout work */
 	INIT_DELAYED_WORK(&xhci->cmd_timer, xhci_handle_command_timeout);

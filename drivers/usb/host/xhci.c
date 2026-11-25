@@ -26,10 +26,10 @@
 #include "xhci-trace.h"
 #include "xhci-debugfs.h"
 #include "xhci-dbgcap.h"
+#include "xhci-exynos-audio.h"
 
 #ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 #include "../../../sound/usb/exynos_usb_audio.h"
-#include "xhci-exynos-audio.h"
 extern struct hcd_hw_info *g_hwinfo;
 #endif
 
@@ -2162,7 +2162,7 @@ int xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 			(unsigned int) new_add_flags);
 
 ret_check:
-#ifdef CONFIG_USB_XHCI_EXYNOS_AUDIO
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 	if (udev->slot_id)
 		xhci_exynos_parse_endpoint(xhci, udev, &ep->desc, virt_dev->out_ctx);
 
