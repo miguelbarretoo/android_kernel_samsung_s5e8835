@@ -78,7 +78,6 @@ static inline void ufs_map_vs_regions(struct exynos_ufs *ufs)
 	ufs->handle.pma = ufs->reg_phy;
 	ufs->handle.cport = ufs->reg_cport;
 	ufs->handle.pcs = ufs->reg_pcs;
-	ufs->handle.private = ufs->hba;
 	ufs->handle.udelay = ufs_udelay;
 }
 
@@ -566,6 +565,7 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 
 	/* refer to hba */
 	ufs->hba = hba;
+	ufs->handle.private = hba;
 
 	/* configure externals */
 	ret = exynos_ufs_config_externals(ufs);
