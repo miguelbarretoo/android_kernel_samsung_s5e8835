@@ -261,35 +261,6 @@ TRACE_EVENT(ufs_perf_gear,
 		__entry->p, __entry->n)
 );
 
-DECLARE_EVENT_CLASS(ufshcd_profiling_template,
-	TP_PROTO(const char *dev_name, const char *profile_info, s64 time_us,
-		 int err),
-
-	TP_ARGS(dev_name, profile_info, time_us, err),
-
-	TP_STRUCT__entry(
-		__string(dev_name, dev_name)
-		__string(profile_info, profile_info)
-		__field(s64, time_us)
-		__field(int, err)
-	),
-
-	TP_fast_assign(
-		__assign_str(dev_name, dev_name);
-		__assign_str(profile_info, profile_info);
-		__entry->time_us = time_us;
-		__entry->err = err;
-	),
-
-	TP_printk("%s: %s: took %lld usecs, err %d",
-		__get_str(dev_name), __get_str(profile_info),
-		__entry->time_us, __entry->err)
-);
-
-DEFINE_EVENT(ufshcd_profiling_template, ufshcd_profile_hibern8,
-	TP_PROTO(const char *dev_name, const char *profile_info, s64 time_us,
-		 int err),
-	TP_ARGS(dev_name, profile_info, time_us, err));
 #endif /* _TRACE_UFS_EXYNOS_PERF_H */
 
 /* This part must be outside protection */

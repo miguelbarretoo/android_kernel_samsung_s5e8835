@@ -56,7 +56,7 @@
 #include "power.h"
 #include "stream.h"
 #include "media.h"
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 #include "exynos_usb_audio.h"
 #endif
 MODULE_AUTHOR("Takashi Iwai <tiwai@suse.de>");
@@ -123,7 +123,7 @@ static struct snd_usb_audio *usb_chip[SNDRV_CARDS];
 static struct usb_driver usb_audio_driver;
 static struct snd_usb_audio_vendor_ops *usb_vendor_ops;
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 int snd_vendor_set_ops(struct snd_usb_audio_vendor_ops *ops)
 {
 	return 0;
@@ -160,7 +160,7 @@ struct snd_usb_audio_vendor_ops *snd_vendor_get_ops(void)
 
 static int snd_vendor_connect(struct usb_interface *intf)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_connect(intf);
@@ -176,7 +176,7 @@ static int snd_vendor_connect(struct usb_interface *intf)
 
 static void snd_vendor_disconnect(struct usb_interface *intf)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	exynos_usb_audio_disconn(intf);
 #else
 	struct snd_usb_audio_vendor_ops *ops = snd_vendor_get_ops();
@@ -190,7 +190,7 @@ int snd_vendor_set_interface(struct usb_device *udev,
 			     struct usb_host_interface *intf,
 			     int iface, int alt)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_set_interface(udev, intf, iface, alt);
@@ -206,7 +206,7 @@ int snd_vendor_set_interface(struct usb_device *udev,
 
 int snd_vendor_set_rate(int iface, int rate, int alt)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_set_rate(iface, rate, alt);
@@ -222,7 +222,7 @@ int snd_vendor_set_rate(int iface, int rate, int alt)
 
 int snd_vendor_set_pcm_buf(struct usb_device *udev, int iface)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_pcmbuf(udev, iface);
@@ -240,7 +240,7 @@ int snd_vendor_set_pcm_buf(struct usb_device *udev, int iface)
 int snd_vendor_set_pcm_intf(struct usb_interface *intf, int iface, int alt,
 			    int direction)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_set_pcmintf(intf, iface, alt, direction);
@@ -259,7 +259,7 @@ int snd_vendor_set_pcm_connection(struct usb_device *udev,
 				  enum snd_vendor_pcm_open_close onoff,
 				  int direction)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_pcm_control(udev, onoff, direction);
@@ -277,7 +277,7 @@ int snd_vendor_set_pcm_binterval(const struct audioformat *fp,
 				 const struct audioformat *found,
 				 int *cur_attr, int *attr)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_set_pcm_binterval(fp, found, cur_attr, attr);
@@ -293,7 +293,7 @@ int snd_vendor_set_pcm_binterval(const struct audioformat *fp,
 
 static int snd_vendor_usb_add_ctls(struct snd_usb_audio *chip)
 {
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#if IS_REACHABLE(CONFIG_SND_EXYNOS_USB_AUDIO_GIC)
 	int ret;
 
 	ret = exynos_usb_audio_add_control(chip);

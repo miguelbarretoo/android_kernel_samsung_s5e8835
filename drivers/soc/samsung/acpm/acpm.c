@@ -123,6 +123,7 @@ DEFINE_SIMPLE_ATTRIBUTE(debug_log_level_fops,
 DEFINE_SIMPLE_ATTRIBUTE(debug_ipc_loopback_test_fops,
 		debug_ipc_loopback_test_get, debug_ipc_loopback_test_set, "%llu\n");
 
+#if !defined(CONFIG_SOC_EXYNOS9830)
 static bool is_running_task_profiler(void)
 {
 	return __raw_readl(task_profile_running);
@@ -233,6 +234,7 @@ static const struct file_operations debug_task_profile_fops = {
 	.write		= task_profile_write,
 	.llseek		= default_llseek,
 };
+#endif
 
 void acpm_init_eint_clk_req(u32 eint_num)
 {
@@ -252,6 +254,8 @@ void acpm_init_eint_clk_req(u32 eint_num)
 				| (0x4 << ACPM_IPC_PROTOCOL_ID) | (0x6 << IPC_PLUGIN_ID);
 #elif defined(CONFIG_SOC_S5E9935)
 				| (0x4 << ACPM_IPC_PROTOCOL_ID) | (0x5 << IPC_PLUGIN_ID);
+#else
+				| 0;
 #endif
 
 	config.cmd[0] |= (4 << 0);
@@ -279,6 +283,8 @@ void acpm_init_eint_nfc_clk_req(u32 eint_num)
 				| (0x4 << ACPM_IPC_PROTOCOL_ID) | (0x6 << IPC_PLUGIN_ID);
 #elif defined(CONFIG_SOC_S5E9935)
 				| (0x4 << ACPM_IPC_PROTOCOL_ID) | (0x5 << IPC_PLUGIN_ID);
+#else
+				| 0;
 #endif
 
 	config.cmd[0] |= (5 << 0);
@@ -329,7 +335,9 @@ static void acpm_debugfs_init(struct acpm_info *acpm)
 	den = debugfs_create_dir("acpm_framework", NULL);
 	debugfs_create_file("ipc_loopback_test", 0644, den, acpm, &debug_ipc_loopback_test_fops);
 	debugfs_create_file("log_level", 0644, den, NULL, &debug_log_level_fops);
+#if !defined(CONFIG_SOC_EXYNOS9830)
 	debugfs_create_file("task_profile", 0644, den, NULL, &debug_task_profile_fops);
+#endif
 }
 
 void *memcpy_align_4(void *dest, const void *src, unsigned int n)

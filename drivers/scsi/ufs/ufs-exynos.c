@@ -37,6 +37,7 @@
 #include <soc/samsung/exynos-smc.h>
 
 #include <trace/events/ufs_exynos_perf.h>
+#include <trace/events/ufs.h>
 
 #ifndef CONFIG_SCSI_UFS_EXYNOS_BLOCK_WDT_RST
 #include <soc/samsung/exynos/debug-snapshot.h>
@@ -77,6 +78,7 @@ static inline void ufs_map_vs_regions(struct exynos_ufs *ufs)
 	ufs->handle.pma = ufs->reg_phy;
 	ufs->handle.cport = ufs->reg_cport;
 	ufs->handle.pcs = ufs->reg_pcs;
+	ufs->handle.private = ufs->hba;
 	ufs->handle.udelay = ufs_udelay;
 }
 
@@ -209,7 +211,7 @@ static inline void __thaw_cport_logger(struct ufs_vs_handle *handle)
 
 static inline void __freeze_cport_logger(struct ufs_vs_handle *handle)
 {
-	hci_writel(handle, ~CPORT_LOG_EN, HCI_PH_CPORT_LOG_CTRL);
+	hci_writel(handle, (u32)~CPORT_LOG_EN, HCI_PH_CPORT_LOG_CTRL);
 }
 
 int exynos_ufs_check_ah8_fsm_state(struct ufs_hba *hba, u32 state)
@@ -2588,6 +2590,7 @@ static int exynos_ufs_probe(struct platform_device *pdev)
 
 	/* init cal */
 	ufs->cal_param.handle = &ufs->handle;
+	ufs->cal_param.host = &ufs->handle;
 	ret = ufs_call_cal(ufs, ufs_cal_init);
 	if (ret)
 		return ret;

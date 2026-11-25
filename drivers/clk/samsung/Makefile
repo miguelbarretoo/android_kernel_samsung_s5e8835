@@ -3,7 +3,11 @@
 # Samsung Clock specific Makefile
 #
 
+ifeq ($(CONFIG_COMPOSITE_CLK_SAMSUNG),y)
+obj-$(CONFIG_COMMON_CLK)	+= clk-pll.o clk-cpu.o
+else
 obj-$(CONFIG_COMMON_CLK)	+= clk.o clk-pll.o clk-cpu.o
+endif
 obj-$(CONFIG_EXYNOS_3250_COMMON_CLK)	+= clk-exynos3250.o
 obj-$(CONFIG_EXYNOS_4_COMMON_CLK)	+= clk-exynos4.o
 obj-$(CONFIG_EXYNOS_4_COMMON_CLK)	+= clk-exynos4412-isp.o

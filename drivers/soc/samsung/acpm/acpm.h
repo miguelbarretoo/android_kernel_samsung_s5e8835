@@ -48,7 +48,9 @@ extern void acpm_init_eint_clk_req(u32 eint_num);
 extern void acpm_init_eint_nfc_clk_req(u32 eint_num);
 extern void acpm_set_sram_addr(void __iomem *base);
 
+#if !defined(CONFIG_SOC_EXYNOS9830)
 extern struct task_info *task_info;
 extern bool *task_profile_running;
+#endif
 
 #endif

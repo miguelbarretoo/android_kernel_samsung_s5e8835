@@ -10,6 +10,9 @@
 #else
 #include <linux/types.h>
 #include <linux/kernel.h>
+#include <linux/delay.h>
+#include <linux/jiffies.h>
+#include "../ufshcd.h"
 #include "ufs-cal-9830.h"
 #endif
 
@@ -24,19 +27,6 @@
 /* Unipro.h */
 #define IS_PWR_MODE_HS(m)        (((m) == FAST_MODE) || ((m) == FASTAUTO_MODE))
 #define IS_PWR_MODE_PWM(m)       (((m) == SLOW_MODE) || ((m) == SLOWAUTO_MODE))
-
-enum {
-	PA_HS_MODE_A	= 1,
-	PA_HS_MODE_B	= 2,
-};
-
-enum {
-	FAST_MODE	= 1,
-	SLOW_MODE	= 2,
-	FASTAUTO_MODE	= 4,
-	SLOWAUTO_MODE	= 5,
-	UNCHANGED	= 7,
-};
 
 /* User defined */
 #define UNIPRO_MCLK_PERIOD(p)			(1000000000L / p->mclk_rate)
@@ -177,8 +167,66 @@ struct ufs_cal_phy_cfg {
 
 #endif /*_UFS_CAL_ */
 
-static struct ufs_cal_param *ufs_cal[NUM_OF_UFS_HOST];
+static struct ufs_cal_param *ufs_cal;
 static unsigned long ufs_cal_lock_timeout = 0xFFFFFFFF;
+
+/* Bridge the legacy S5E9830 CAL callbacks to the 5.15 UFS host handle. */
+void ufs_lld_dme_set(void *h, u32 addr, u32 val)
+{
+	struct ufs_vs_handle *handle = h;
+
+	ufshcd_dme_set(handle->private, addr, val);
+}
+
+void ufs_lld_dme_get(void *h, u32 addr, u32 *val)
+{
+	struct ufs_vs_handle *handle = h;
+
+	ufshcd_dme_get_attr(handle->private, addr, val, DME_LOCAL);
+}
+
+void ufs_lld_dme_peer_set(void *h, u32 addr, u32 val)
+{
+	struct ufs_vs_handle *handle = h;
+
+	ufshcd_dme_set_attr(handle->private, addr, ATTR_SET_NOR, val,
+			   DME_PEER);
+}
+
+void ufs_lld_pma_write(void *h, u32 val, u32 addr)
+{
+	pma_writel(h, val, addr);
+}
+
+u32 ufs_lld_pma_read(void *h, u32 addr)
+{
+	return pma_readl(h, addr);
+}
+
+void ufs_lld_unipro_write(void *h, u32 val, u32 addr)
+{
+	unipro_writel(h, val, addr);
+}
+
+void ufs_lld_udelay(u32 val)
+{
+	udelay(val);
+}
+
+void ufs_lld_usleep_delay(u32 min, u32 max)
+{
+	usleep_range(min, max);
+}
+
+unsigned long ufs_lld_get_time_count(unsigned long offset)
+{
+	return jiffies + offset;
+}
+
+unsigned long ufs_lld_calc_timeout(const unsigned int ms)
+{
+	return msecs_to_jiffies(ms);
+}
 
 static const struct ufs_cal_phy_cfg init_cfg_evt0[] = {
 	{0x44, 0x00, PMD_ALL, UNIPRO_DBG_PRD, BRD_ALL},
@@ -1473,16 +1521,9 @@ ufs_cal_errno ufs_cal_pre_link(struct ufs_cal_param *p)
 	return ret;
 }
 
-ufs_cal_errno ufs_cal_init(struct ufs_cal_param *p, int idx)
+ufs_cal_errno ufs_cal_init(struct ufs_cal_param *p)
 {
-	/*
-	 * Return if innput index is greater than
-	 * the maximum that cal supports
-	 */
-	if (idx >= NUM_OF_UFS_HOST)
-		return UFS_CAL_INV_ARG;
-
-	ufs_cal[idx] = p;
+	ufs_cal = p;
 
 	ufs_cal_lock_timeout = ufs_lld_calc_timeout(1);
 
@@ -1500,7 +1541,7 @@ ufs_cal_errno ufs_cal_eom_prepare(struct ufs_cal_param *p)
 	return ret;
 }
 
-ufs_cal_errno ufs_cal_eom(struct ufs_cal_param *p, u32 hs_gear, u32 num_of_active_rx, struct ufs_eom_result_s **eom_result)
+ufs_cal_errno ufs_cal_eom(struct ufs_cal_param *p)
 {
 	u32 phaseRepeat, phaseSweep, vrefSweep;
 	u32 phaseMax = 72;
@@ -1514,6 +1555,9 @@ ufs_cal_errno ufs_cal_eom(struct ufs_cal_param *p, u32 hs_gear, u32 num_of_activ
 	u32 cnt = 0;
 
 	void *hba = p->host;
+	u32 hs_gear = p->max_gear;
+	u32 num_of_active_rx = p->active_rx_lane;
+	struct ufs_eom_result_s **eom_result = p->eom;
 
 	if (num_of_active_rx > MAX_LANE)
 		return UFS_CAL_ERROR;
@@ -1570,5 +1614,26 @@ ufs_cal_errno ufs_cal_eom(struct ufs_cal_param *p, u32 hs_gear, u32 num_of_activ
 		}
 		cnt = 0;
 	}
+	return UFS_CAL_NO_ERROR;
+}
+
+/* The legacy CAL has no separate power-management phases. */
+ufs_cal_errno ufs_cal_pre_pm(struct ufs_cal_param *p)
+{
+	return UFS_CAL_NO_ERROR;
+}
+
+ufs_cal_errno ufs_cal_post_pm(struct ufs_cal_param *p)
+{
+	return UFS_CAL_NO_ERROR;
+}
+
+ufs_cal_errno ufs_cal_during_hce_enable(struct ufs_cal_param *p)
+{
+	return UFS_CAL_NO_ERROR;
+}
+
+ufs_cal_errno ufs_cal_resume_hibern8(struct ufs_cal_param *p)
+{
 	return UFS_CAL_NO_ERROR;
 }

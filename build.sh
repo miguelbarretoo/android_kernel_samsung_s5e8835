@@ -13,7 +13,7 @@ Options:
   -k, --ksu <y|n>          Include KernelSU-Next (default: n)
   -r, --recovery <y|n>     Build only recovery-side artifacts
   -d, --dtbs <y|n>         Build only Image/DTB artifacts, no boot ZIP
-  -j, --jobs <count>       Parallel jobs (default: nproc)
+	  -j, --jobs <count>       Parallel jobs (default: nproc --all)
 EOF
 }
 
@@ -21,7 +21,7 @@ MODEL="${MODEL:-x1slte}"
 KSU_OPTION="${KSU_OPTION:-n}"
 RECOVERY_OPTION="${RECOVERY_OPTION:-n}"
 DTB_OPTION="${DTB_OPTION:-n}"
-JOBS="${JOBS:-$(nproc)}"
+JOBS="${JOBS:-$(nproc --all)}"
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -87,7 +87,7 @@ command -v clang >/dev/null || {
 	exit 1
 }
 
-CORES="${JOBS:-$(nproc)}"
+CORES="${JOBS:-$(nproc --all)}"
 BUILD_OUT="$ROOT_DIR/out"
 PACKAGE_OUT="$ROOT_DIR/build/out/$MODEL"
 rm -rf -- "$PACKAGE_OUT"
@@ -114,6 +114,10 @@ if [[ "$KSU_OPTION" == y ]]; then
 	FRAGMENTS+=("arch/arm64/configs/ksu.config")
 fi
 scripts/kconfig/merge_config.sh -m -O "$BUILD_OUT" "$BUILD_OUT/.config" "${FRAGMENTS[@]}"
+if [[ "$KSU_OPTION" == n ]]; then
+	# Do not inherit KSU from a previous build in the reusable O= directory.
+	scripts/config --file "$BUILD_OUT/.config" --disable KSU
+fi
 "${MAKE_ARGS[@]}" olddefconfig
 
 if [[ "$DTB_OPTION" == y ]]; then

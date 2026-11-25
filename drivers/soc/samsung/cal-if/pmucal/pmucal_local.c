@@ -199,7 +199,9 @@ int pmucal_local_disable(unsigned int pd_id)
 err_out:
 	if (pd_id < pmucal_pd_list_size) {
 		pr_auto(ASL1, "%s occur error at power off!\n", pmucal_pd_list[pd_id].name);
+		#if IS_REACHABLE(CONFIG_SEC_DEBUG_EXTRA_INFO)
 		secdbg_exin_set_epd(pmucal_pd_list[pd_id].name);
+		#endif
 	}
 
 	dump_stack();

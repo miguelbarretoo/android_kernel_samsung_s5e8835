@@ -8,7 +8,6 @@ dss-y 					+= debug-snapshot.o \
 					debug-snapshot-utils.o \
 					debug-snapshot-dpm.o \
 					debug-snapshot-pmsg.o \
-					printk_ringbuffer.o \
 					cache.o
 obj-$(CONFIG_DEBUG_SNAPSHOT_DEBUG_KINFO) += debug-snapshot-debug-kinfo.o
 obj-$(CONFIG_DEBUG_SNAPSHOT_SFRDUMP)	+= debug-snapshot-sfrdump.o

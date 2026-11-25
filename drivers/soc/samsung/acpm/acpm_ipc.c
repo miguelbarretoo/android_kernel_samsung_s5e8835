@@ -1165,8 +1165,10 @@ int acpm_ipc_probe(struct platform_device *pdev)
 		acpm_debug->ipc_info = ipc;
 		acpm_set_sram_addr(ipc->sram_base);
 
+#if !defined(CONFIG_SOC_EXYNOS9830)
 		task_profile_running = &(acpm_initdata->task_profile_running);
-		task_info = (struct task_info*)(ipc->sram_base + acpm_initdata->task_info);
+		task_info = (struct task_info *)(ipc->sram_base + acpm_initdata->task_info);
+#endif
 
 	} else {
 		prop = of_get_property(node, "dump-base", &len);
