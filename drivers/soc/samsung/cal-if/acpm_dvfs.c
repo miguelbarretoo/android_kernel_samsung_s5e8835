@@ -17,6 +17,19 @@ static struct acpm_dvfs acpm_dvfs;
 static struct acpm_dvfs acpm_noti_mif;
 static struct exynos_pm_qos_request mif_request_from_acpm;
 static struct exynos_pm_qos_request int_request_from_acpm;
+static bool acpm_dvfs_ready;
+
+static bool acpm_dvfs_channel_ready(void)
+{
+	return !IS_ENABLED(CONFIG_SOC_EXYNOS9830) ||
+		smp_load_acquire(&acpm_dvfs_ready);
+}
+
+static int acpm_dvfs_request_main_channel(void)
+{
+	return acpm_ipc_request_channel(acpm_dvfs.dev, NULL,
+					&acpm_dvfs.ch_num, &acpm_dvfs.size);
+}
 
 int exynos_acpm_set_rate(unsigned int id, unsigned long rate, bool fast_switch)
 {
@@ -25,7 +38,12 @@ int exynos_acpm_set_rate(unsigned int id, unsigned long rate, bool fast_switch)
 	unsigned long long before, after, latency;
 	unsigned int ch;
 	int ret;
-	u32 start_time = acpm_get_peri_timer();
+	u32 start_time;
+
+	if (!acpm_dvfs_channel_ready())
+		return -EPROBE_DEFER;
+
+	start_time = acpm_get_peri_timer();
 
 	config.cmd = cmd;
 	config.response = !fast_switch;
@@ -58,6 +76,9 @@ int exynos_acpm_set_init_freq(unsigned int dfs_id, unsigned long freq)
 	unsigned int cmd[4];
 	unsigned long long before, after, latency;
 	int ret, id;
+
+	if (!acpm_dvfs_channel_ready())
+		return -EPROBE_DEFER;
 
 	id = GET_IDX(dfs_id);
 
@@ -124,6 +145,9 @@ int exynos_acpm_set_volt_margin(unsigned int id, int volt)
 	config.cmd[3] = 0;
 
 	before = sched_clock();
+	if (!acpm_dvfs_channel_ready())
+		return -EPROBE_DEFER;
+
 	ret = acpm_ipc_send_data(acpm_dvfs.ch_num, &config);
 	after = sched_clock();
 	latency = after - before;
@@ -291,6 +315,13 @@ static int acpm_dvfs_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret = 0;
 
+	/* The Exynos 990 clock driver sets the main channel's DT node early. */
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+		ret = acpm_dvfs_request_main_channel();
+		if (ret)
+			return dev_err_probe(dev, ret, "cannot open ACPM DVFS channel\n");
+	}
+
 	acpm_noti_mif.dev = dev->of_node;
 
 	ret = acpm_ipc_request_channel(acpm_noti_mif.dev,
@@ -303,6 +334,12 @@ static int acpm_dvfs_probe(struct platform_device *pdev)
 
 	exynos_pm_qos_add_request(&mif_request_from_acpm, PM_QOS_BUS_THROUGHPUT, 0);
 	exynos_pm_qos_add_request(&int_request_from_acpm, PM_QOS_DEVICE_THROUGHPUT, 0);
+
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+		smp_store_release(&acpm_dvfs_ready, true);
+		dev_info(dev, "ACPM DVFS channels ready: main=%u notification=%u\n",
+			 acpm_dvfs.ch_num, acpm_noti_mif.ch_num);
+	}
 
 //#ifndef CONFIG_EXYNOS_ACPM_THERMAL
 //	acpm_dvfs_get_cpu_cold_temp_list(dev);
@@ -348,13 +385,11 @@ int exynos_acpm_dvfs_init(void)
 {
 	int ret;
 
-	ret = acpm_ipc_request_channel(acpm_dvfs.dev,
-				 NULL,
-				 &acpm_dvfs.ch_num,
-				 &acpm_dvfs.size);
-
-	if (ret < 0)
-		pr_err("acpm_dvfs_init fail ret = %d\n", ret);
+	if (!IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+		ret = acpm_dvfs_request_main_channel();
+		if (ret < 0)
+			pr_err("acpm_dvfs_init fail ret = %d\n", ret);
+	}
 
 	secdbg_freq_init();
 

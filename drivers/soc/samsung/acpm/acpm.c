@@ -483,6 +483,11 @@ static int acpm_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	/* FVMAP is an offset from the SRAM mapping provided by ACPM IPC. */
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830) && !READ_ONCE(acpm_sram_base))
+		return dev_err_probe(&pdev->dev, -EPROBE_DEFER,
+				     "waiting for ACPM IPC SRAM\n");
+
 	acpm = devm_kzalloc(&pdev->dev,
 			sizeof(struct acpm_info), GFP_KERNEL);
 	if (IS_ERR(acpm))

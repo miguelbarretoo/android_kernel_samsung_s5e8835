@@ -315,6 +315,9 @@ static unsigned int __acpm_ipc_request_channel(struct acpm_ipc_info *ipc,
 	prop = of_get_property(np, "acpm-ipc-channel", &len);
 	if (!prop)
 		return -ENOENT;
+	if (!ipc)
+		return -EPROBE_DEFER;
+
 	req_ch_id = be32_to_cpup(prop);
 
 	for(i = 0; i < ipc->num_channels; i++) {
@@ -660,7 +663,9 @@ int __acpm_ipc_send_data(struct acpm_ipc_info *ipc, unsigned int channel_id,
 	u32 seq_cnt = 0;
 	unsigned long flags;
 
-	if (channel_id >= ipc->num_channels && !cfg)
+	if (!ipc)
+		return -EPROBE_DEFER;
+	if (channel_id >= ipc->num_channels || !cfg)
 		return -EIO;
 
 	channel = &ipc->channel[channel_id];
