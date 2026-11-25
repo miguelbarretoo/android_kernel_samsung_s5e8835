@@ -171,6 +171,8 @@ dtb-y += exynos/exynos5433-tm2e.dtb
 dtb-y += exynos/s5e9935.dtb
 dtb-y += exynos/s5e8835.dtb
 dtb-$(CONFIG_SOC_EXYNOS9830) += exynos/exynos9830.dtb
+# The bootloader resolves Samsung DTBO fixups against this base tree.
+DTC_FLAGS_exynos9830 += -@
 
 dtbo-$(CONFIG_MODEL_X1SLTE) += \
 	samsung/exynos990-x1slte_eur_open_00.dtbo \
