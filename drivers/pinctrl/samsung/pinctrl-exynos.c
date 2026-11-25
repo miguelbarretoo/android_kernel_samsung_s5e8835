@@ -706,6 +706,7 @@ int exynos_eint_wkup_init(struct samsung_pinctrl_drv_data *d)
 	unsigned int i;
 	int idx, irq;
 	const char *str;
+	bool legacy = of_device_is_compatible(dev->of_node, "samsung,exynos9830-pinctrl");
 
 	for_each_child_of_node(dev->of_node, np) {
 		const struct of_device_id *match;
@@ -733,9 +734,10 @@ int exynos_eint_wkup_init(struct samsung_pinctrl_drv_data *d)
 		}
 		bank->irq_chip->chip.name = bank->name;
 
-		/* Only alive block has filter selection register. */
-		/* Setting Digital Filter */
-		exynos_eint_flt_config(EXYNOS_EINT_FLTCON_EN, EXYNOS_EINT_FLTCON_SEL, 0, d, bank);
+		/* Exynos 9830 CMGP has a fixed digital-filter mode. */
+		exynos_eint_flt_config(EXYNOS_EINT_FLTCON_EN,
+			legacy && strncmp(bank->name, "gpa", 3) ? 0 : EXYNOS_EINT_FLTCON_SEL,
+			0, d, bank);
 
 		bank->irq_domain = irq_domain_add_linear(bank->of_node,
 				bank->nr_pins, &exynos_eint_irqd_ops, bank);

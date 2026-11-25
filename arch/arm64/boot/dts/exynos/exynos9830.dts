@@ -1537,7 +1537,9 @@
 			<0x0 0x13100000 0x200>,	/* 0: HCI standard */
 			<0x0 0x13101100 0x200>,	/* 1: Vendor specificed */
 			<0x0 0x13180000 0x8000>,	/* 2: UNIPRO */
-			<0x0 0x132A0000 0x100>;	/* 3: UFS protector */
+			<0x0 0x132A0000 0x100>,	/* 3: UFS protector */
+			<0x0 0x13104000 0x3000>,	/* 4: PHY PMA */
+			<0x0 0x13108000 0x804>;	/* 5: CPORT */
 		interrupts = <GIC_SPI INTREQ__UFS_EMBD IRQ_TYPE_LEVEL_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&ufs_rst_n &ufs_refclk_out &xboot_ldo>;
@@ -1553,8 +1555,10 @@
 			/* unipro clocks */
 			"UFS_EMBD";
 
-		/* DMA coherent callback, should be coupled with 'ufs-sys' */
 		dma-coherent;
+		samsung,sysreg-phandle = <&sysreg_hsi1_mmc>;
+		ufs,phy_iso = <0x0724 0x1 0x1>;
+		ufs,iocc = <0x700 (BIT_22 | BIT_23) (BIT_22 | BIT_23)>;
 
 		/* ----------------------- */
 		/* 2. UFS COMMON           */

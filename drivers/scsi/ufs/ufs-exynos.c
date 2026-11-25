@@ -353,12 +353,15 @@ static void exynos_ufs_set_unipro_mclk(struct exynos_ufs *ufs)
 static void exynos_ufs_set_internal_timer(struct exynos_ufs *ufs)
 {
 	struct ufs_vs_handle *handle = &ufs->handle;
-	u32 reg;
+	u32 reg, count = ufs->freq_for_1us_cntval;
+
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830) && !count)
+		count = ufs->mclk_rate / USEC_PER_SEC;
 
 	/* To make 40us */
 	reg = hci_readl(handle, HCI_1US_TO_CNT_VAL);
 	reg &= ~CNT_VAL_1US_MASK;
-	reg |= (ufs->freq_for_1us_cntval & CNT_VAL_1US_MASK);
+	reg |= count & CNT_VAL_1US_MASK;
 	hci_writel(handle, reg, HCI_1US_TO_CNT_VAL);
 
 	/* IA_TICK_SEL : 1(1us_TO_CNT_VAL) */
@@ -1971,6 +1974,11 @@ static int exynos_ufs_populate_dt(struct device *dev, struct exynos_ufs *ufs)
 		}
 	}
 
+	/* The Exynos 990 derives this counter from the UniPro clock. */
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830) &&
+	    !of_find_property(np, "freq-for-1us-cntval", NULL))
+		return 0;
+
 	ret = of_property_read_u32(np, "freq-for-1us-cntval",
 			&ufs->freq_for_1us_cntval);
 	if (ret)
@@ -2002,12 +2010,16 @@ static int exynos_ufs_ioremap(struct exynos_ufs *ufs,
 	for (i = 1, p = &ufs->reg_hci;
 			i < NUM_OF_UFS_MMIO_REGIONS + 1; i++, p++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
-		if (!res)
+		if (!res) {
+			if (IS_ENABLED(CONFIG_SOC_EXYNOS9830) && i <= 5)
+				return dev_err_probe(dev, -EINVAL, "missing %s registers\n",
+						     ufs_region_names[i]);
 			continue;
+		}
 
 		*p = devm_ioremap_resource(dev, res);
-		if (!*p) {
-			ret = -ENOMEM;
+		if (IS_ERR(*p)) {
+			ret = PTR_ERR(*p);
 			break;
 		}
 		dev_info(dev, "%-10s 0x%llx\n", ufs_region_names[i], *p);
