@@ -25,6 +25,7 @@
 #include <linux/fs.h>
 #include <linux/panic_notifier.h>
 #include <linux/proc_fs.h>
+#include <linux/libfdt.h>
 #include <linux/memblock.h>
 #include <linux/of_fdt.h>
 #include <linux/efi.h>
@@ -192,6 +193,10 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 		memblock_reserve(dt_phys, size);
 
 	if (!dt_virt || !early_init_dt_scan(dt_virt)) {
+		if (dt_virt)
+			exynos990_boot_trace_error(EXYNOS990_TRACE_FDT,
+				EXYNOS990_TRACE_FDT_HEADER, dt_phys,
+				fdt_check_header(dt_virt), size);
 		pr_crit("\n"
 			"Error: invalid device tree blob at physical address %pa (virtual address 0x%p)\n"
 			"The dtb must be 8-byte aligned and must not exceed 2 MB in size\n"
@@ -201,6 +206,10 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 		while (true)
 			cpu_relax();
 	}
+
+	if (IS_ENABLED(CONFIG_MODEL_X1SLTE) && !memblock_phys_mem_size())
+		exynos990_boot_trace_error(EXYNOS990_TRACE_FDT,
+			EXYNOS990_TRACE_FDT_NO_RAM, dt_phys, size, 0);
 
 	/* Early fixups are done, map the FDT as read-only now */
 	fixmap_remap_fdt(dt_phys, &size, PAGE_KERNEL_RO);
@@ -295,14 +304,52 @@ u64 cpu_logical_map(unsigned int cpu)
 	return __cpu_logical_map[cpu];
 }
 
-static void __init exynos990_boot_mark_setup_arch(void)
-{
-	void __iomem *mark;
+#ifdef CONFIG_MODEL_X1SLTE
+#define EXYNOS990_TRACE_MAP_SIZE	48
 
-	if (!IS_ENABLED(CONFIG_MODEL_X1SLTE))
+static u32 __iomem *exynos990_trace_map;
+static bool exynos990_trace_armed;
+
+static __always_inline void exynos990_trace_word(u32 __iomem *mark, u32 value)
+{
+	WRITE_ONCE(*(u32 __force *)mark, cpu_to_le32(value));
+}
+
+static __always_inline void exynos990_trace_value(u32 __iomem *mark, u64 value)
+{
+	exynos990_trace_word(mark, lower_32_bits(value));
+	exynos990_trace_word(mark + 1, upper_32_bits(value));
+}
+
+void noinstr exynos990_boot_trace_error(u32 tag, u64 a, u64 b, u64 c, u64 d)
+{
+	u32 __iomem *mark = READ_ONCE(exynos990_trace_map);
+
+	if (!mark || !READ_ONCE(exynos990_trace_armed))
 		return;
 
-	mark = early_ioremap(EXYNOS990_BOOT_TRACE_ADDR, 16);
+	/* Keep the first error, and avoid recursion if recording itself faults. */
+	WRITE_ONCE(exynos990_trace_armed, false);
+	exynos990_trace_word(mark, 0);
+	exynos990_trace_word(mark + 1, 36);
+	exynos990_trace_word(mark + 2, 36);
+	exynos990_trace_word(mark + 3, tag);
+	exynos990_trace_value(mark + 4, a);
+	exynos990_trace_value(mark + 6, b);
+	exynos990_trace_value(mark + 8, c);
+	exynos990_trace_value(mark + 10, d);
+	dsb(sy);
+	exynos990_trace_word(mark, EXYNOS990_BOOT_TRACE_MAGIC);
+	dsb(sy);
+}
+#endif
+
+static void __init exynos990_boot_mark_setup_arch(void)
+{
+#ifdef CONFIG_MODEL_X1SLTE
+	void __iomem *mark;
+
+	mark = early_ioremap(EXYNOS990_BOOT_TRACE_ADDR, EXYNOS990_TRACE_MAP_SIZE);
 	if (!mark)
 		return;
 
@@ -313,7 +360,20 @@ static void __init exynos990_boot_mark_setup_arch(void)
 	dsb(sy);
 	writel_relaxed(EXYNOS990_BOOT_TRACE_MAGIC, mark);
 	dsb(sy);
-	early_iounmap(mark, 16);
+	WRITE_ONCE(exynos990_trace_map, mark);
+	WRITE_ONCE(exynos990_trace_armed, true);
+#endif
+}
+
+static void __init exynos990_boot_trace_stop(void)
+{
+#ifdef CONFIG_MODEL_X1SLTE
+	WRITE_ONCE(exynos990_trace_armed, false);
+	if (exynos990_trace_map) {
+		early_iounmap(exynos990_trace_map, EXYNOS990_TRACE_MAP_SIZE);
+		WRITE_ONCE(exynos990_trace_map, NULL);
+	}
+#endif
 }
 
 void __init __no_sanitize_address setup_arch(char **cmdline_p)
@@ -379,6 +439,7 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 
 	request_standard_resources();
 
+	exynos990_boot_trace_stop();
 	early_ioremap_reset();
 
 	if (acpi_disabled)

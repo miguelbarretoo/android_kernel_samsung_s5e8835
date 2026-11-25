@@ -27,6 +27,7 @@
 #include <asm/barrier.h>
 #include <asm/cputype.h>
 #include <asm/fixmap.h>
+#include <asm/exynos990-boot-trace.h>
 #include <asm/kasan.h>
 #include <asm/kernel-pgtable.h>
 #include <asm/sections.h>
@@ -1416,8 +1417,11 @@ void *__init fixmap_remap_fdt(phys_addr_t dt_phys, int *size, pgprot_t prot)
 	 * here if that is indeed the case.
 	 */
 	BUILD_BUG_ON(MIN_FDT_ALIGN < 8);
-	if (!dt_phys || dt_phys % MIN_FDT_ALIGN)
+	if (!dt_phys || dt_phys % MIN_FDT_ALIGN) {
+		exynos990_boot_trace_error(EXYNOS990_TRACE_FDT,
+			EXYNOS990_TRACE_FDT_ADDRESS, dt_phys, MIN_FDT_ALIGN, 0);
 		return NULL;
+	}
 
 	/*
 	 * Make sure that the FDT region can be mapped without the need to
@@ -1441,12 +1445,18 @@ void *__init fixmap_remap_fdt(phys_addr_t dt_phys, int *size, pgprot_t prot)
 	create_mapping_noalloc(round_down(dt_phys, SWAPPER_BLOCK_SIZE),
 			dt_virt_base, SWAPPER_BLOCK_SIZE, prot);
 
-	if (fdt_magic(dt_virt) != FDT_MAGIC)
+	if (fdt_magic(dt_virt) != FDT_MAGIC) {
+		exynos990_boot_trace_error(EXYNOS990_TRACE_FDT,
+			EXYNOS990_TRACE_FDT_MAGIC, dt_phys, fdt_magic(dt_virt), FDT_MAGIC);
 		return NULL;
+	}
 
-	*size = fdt_totalsize(dt_virt);
-	if (*size > MAX_FDT_SIZE)
+	if (fdt_totalsize(dt_virt) > MAX_FDT_SIZE) {
+		exynos990_boot_trace_error(EXYNOS990_TRACE_FDT,
+			EXYNOS990_TRACE_FDT_SIZE, dt_phys, fdt_totalsize(dt_virt), MAX_FDT_SIZE);
 		return NULL;
+	}
+	*size = fdt_totalsize(dt_virt);
 
 	if (offset + *size > SWAPPER_BLOCK_SIZE)
 		create_mapping_noalloc(round_down(dt_phys, SWAPPER_BLOCK_SIZE), dt_virt_base,

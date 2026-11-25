@@ -17,6 +17,8 @@
 #include <asm/daifflags.h>
 #include <asm/esr.h>
 #include <asm/exception.h>
+#include <asm/exynos990-boot-trace.h>
+#include <asm/sections.h>
 #include <asm/kprobes.h>
 #include <asm/mmu.h>
 #include <asm/processor.h>
@@ -413,10 +415,19 @@ static void noinstr el1_fpac(struct pt_regs *regs, unsigned long esr)
 	exit_to_kernel_mode(regs);
 }
 
+static __always_inline void exynos990_trace_el1(struct pt_regs *regs,
+					      unsigned long esr)
+{
+	if (IS_ENABLED(CONFIG_MODEL_X1SLTE))
+		exynos990_boot_trace_error(EXYNOS990_TRACE_FAULT, esr,
+			read_sysreg(far_el1), regs->pc, regs->pc - (u64)_text);
+}
+
 asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
 {
 	unsigned long esr = read_sysreg(esr_el1);
 
+	exynos990_trace_el1(regs, esr);
 	switch (ESR_ELx_EC(esr)) {
 	case ESR_ELx_EC_DABT_CUR:
 	case ESR_ELx_EC_IABT_CUR:
@@ -484,6 +495,7 @@ asmlinkage void noinstr el1h_64_error_handler(struct pt_regs *regs)
 {
 	unsigned long esr = read_sysreg(esr_el1);
 
+	exynos990_trace_el1(regs, esr);
 	local_daif_restore(DAIF_ERRCTX);
 	arm64_enter_nmi(regs);
 	do_serror(regs, esr);
