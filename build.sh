@@ -4,6 +4,32 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
+START=$SECONDS
+
+format_time() {
+    local total=$1
+    local h=$((total / 3600))
+    local m=$(((total % 3600) / 60))
+    local s=$((total % 60))
+
+    if (( h > 0 )); then
+        echo "${h}h ${m}m ${s}s"
+    elif (( m > 0 )); then
+        echo "${m}m ${s}s"
+    else
+        echo "${s}s"
+    fi
+}
+
+abort()
+{
+    cd -
+    echo "-----------------------------------------------"
+    echo "Build failed in $(format_time $((SECONDS - START)))!"
+    echo "-----------------------------------------------"
+    exit -1
+}
+
 usage() {
 	cat <<EOF
 Usage: $(basename "$0") [options]
@@ -104,9 +130,14 @@ MAKE_ARGS=(
 	PLATFORM_VERSION_FOR_GPU=13
 )
 
+echo "-----------------------------------------------"
 echo "Defconfig: exynos990-x1slte_defconfig + $MODEL.config"
 echo "KernelSU-Next: $KSU_OPTION"
 echo "Jobs: $CORES"
+echo "Recovery-only: $RECOVERY_OPTION"
+echo "DTBs-only: $DTB_OPTION"
+echo "bomb by @miguelbarretoo"
+echo "-----------------------------------------------"
 
 "${MAKE_ARGS[@]}" exynos990-x1slte_defconfig
 FRAGMENTS=("$MODEL_CONFIG")
@@ -131,26 +162,35 @@ else
 	BUILD_TARGETS=(Image dtbs)
 fi
 
-echo "Building: ${BUILD_TARGETS[*]}"
-"${MAKE_ARGS[@]}" -j"$CORES" "${BUILD_TARGETS[@]}"
+#echo "Building: ${BUILD_TARGETS[*]}"
+echo "-----------------------------------------------"
+echo "Building kernel..."
+"${MAKE_ARGS[@]}" -j"$CORES" "${BUILD_TARGETS[@]}" || abort
 
 DTB_CONFIG=build/dtconfigs/exynos9830.cfg
 [[ "$MODEL" == r8s ]] && DTB_CONFIG=build/dtconfigs/exynos9830-r8s.cfg
 
+# Build dtbo
+echo "-----------------------------------------------"
+echo "Building Device Tree Blob Output Image for "$MODEL"..."
 ./toolchain/mkdtimg cfg_create "$PACKAGE_OUT/dtb.img" "$DTB_CONFIG" \
 	-d "$BUILD_OUT/arch/arm64/boot/dts/exynos"
 ./toolchain/mkdtimg cfg_create "$PACKAGE_OUT/dtbo.img" \
 	"build/dtconfigs/$MODEL.cfg" \
 	-d "$BUILD_OUT/arch/arm64/boot/dts/samsung"
+echo "-----------------------------------------------"
 
 if [[ "$DTB_OPTION" == y ]]; then
 	echo "DTB build finished: $PACKAGE_OUT"
+	echo "-----------------------------------------------"
 	exit 0
 fi
 
 cp "$BUILD_OUT/arch/arm64/boot/Image" "$PACKAGE_OUT/Image"
 
 if [[ "$RECOVERY_OPTION" != y ]]; then
+	# Build ramdisk
+    echo "Building RAMDisk..."
 	RAMDISK="$PACKAGE_OUT/ramdisk.cpio.gz"
 	(
 		RAMDISK_ROOT="$(mktemp -d)"
@@ -167,7 +207,10 @@ if [[ "$RECOVERY_OPTION" != y ]]; then
 			cpio --null --reproducible -o -H newc -R root:root |
 			gzip -n > "$RAMDISK"
 	)
-
+    echo "-----------------------------------------------"
+    # Create boot image
+    echo "Creating boot image..."
+    echo "-----------------------------------------------"
 	./toolchain/mkbootimg \
 		--base 0x10000000 \
 		--board "$BOARD" \
@@ -187,6 +230,9 @@ if [[ "$RECOVERY_OPTION" != y ]]; then
 		--tags_offset 0x00000100 \
 		-o "$PACKAGE_OUT/boot.img"
 
+    # Build zip
+    echo "Building zip..."
+    echo "-----------------------------------------------"
 	cp "$PACKAGE_OUT/boot.img" "$PACKAGE_OUT/zip/files/boot.img"
 	cp "$PACKAGE_OUT/dtbo.img" "$PACKAGE_OUT/zip/files/dtbo.img"
 	cp build/update-binary "$PACKAGE_OUT/zip/META-INF/com/google/android/update-binary"
@@ -205,4 +251,6 @@ if [[ "$RECOVERY_OPTION" != y ]]; then
 	echo "Flashable ZIP: $PACKAGE_OUT/$ZIP_NAME"
 fi
 
-echo "Build finished successfully!"
+echo "-----------------------------------------------"
+echo "Build finished successfully in $(format_time $((SECONDS - START)))!"
+echo "-----------------------------------------------"
