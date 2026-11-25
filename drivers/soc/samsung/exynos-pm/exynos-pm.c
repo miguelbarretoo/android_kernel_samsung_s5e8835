@@ -697,7 +697,7 @@ static ssize_t asv_info_show(struct device *dev,
 static DEVICE_ATTR_RO(asv_info);
 #endif /* CONFIG_SEC_FACTORY */
 
-static int exynos_pm_drvinit(void)
+static int __init exynos_pm_drvinit(void)
 {
 	int ret;
 #if defined(CONFIG_SEC_FACTORY)
