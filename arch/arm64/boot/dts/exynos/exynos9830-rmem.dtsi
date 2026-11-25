@@ -72,16 +72,16 @@
 			#address-cells = <2>;
 			#size-cells = <1>;
 
-			header {
-				compatible = "debug-snapshot,header";
+			dss_header: header {
+				compatible = "debug-snapshot,header", "header";
 				reg = <0 DSS_HEADER_ADDR DSS_HEADER_SIZE>;
 			};
-			log_kernel {
-				compatible = "debug-snapshot,log_kernel";
+			dss_kernel: log_kernel {
+				compatible = "debug-snapshot,log_kernel", "log_kernel";
 				reg = <0 DSS_LOG_KERNEL_ADDR DSS_LOG_KERNEL_SIZE>;
 			};
-			log_platform {
-				compatible = "debug-snapshot,log_platform";
+			dss_platform: log_platform {
+				compatible = "debug-snapshot,log_platform", "log_platform";
 				reg = <0 DSS_LOG_PLATFORM_ADDR DSS_LOG_PLATFORM_SIZE>;
 			};
 			log_sfr {
@@ -116,18 +116,22 @@
 				compatible = "debug-snapshot,log_dbgc";
 				reg = <0 DSS_LOG_DBGC_ADDR DSS_LOG_DBGC_SIZE>;
 			};
-			log_pstore {
-				compatible = "debug-snapshot,log_pstore";
-				reg = <0 DSS_LOG_PSTORE_ADDR DSS_LOG_PSTORE_SIZE>;
-			};
-			log_kevents {
-				compatible = "debug-snapshot,log_kevents";
+			dss_kevents: log_kevents {
+				compatible = "debug-snapshot,log_kevents", "log_kevents";
 				reg = <0 DSS_LOG_KEVENTS_ADDR DSS_LOG_KEVENTS_SIZE>;
 			};
 			log_fatal {
 				compatible = "debug-snapshot,log_fatal";
 				reg = <0 DSS_LOG_FATAL_ADDR DSS_LOG_FATAL_SIZE>;
 			};
+		};
+
+		ramoops {
+			compatible = "ramoops";
+			reg = <0 DSS_LOG_PSTORE_ADDR DSS_LOG_PSTORE_SIZE>;
+			/* Keep the two slots readable by the 4.19 recovery. */
+			record-size = <0x4000>;
+			pmsg-size = <0x4000>;
 		};
 
 		seclog_mem {

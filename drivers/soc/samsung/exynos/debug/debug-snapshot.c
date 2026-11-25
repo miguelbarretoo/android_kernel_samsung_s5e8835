@@ -413,13 +413,35 @@ int dbg_snapshot_get_num_items(void)
 }
 EXPORT_SYMBOL_GPL(dbg_snapshot_get_num_items);
 
+static u64 *dbg_snapshot_legacy_kmsg_marker(struct dbg_snapshot_item *item)
+{
+	/* The Exynos 990 recovery checks the last eight bytes of the ring. */
+	if (!IS_ENABLED(CONFIG_SOC_EXYNOS9830) ||
+	    item != &dss_items[DSS_ITEM_KERNEL_ID])
+		return NULL;
+
+	return (u64 *)(item->head_ptr + item->entry.size - sizeof(u64));
+}
+
 static inline int dbg_snapshot_check_eob(struct dbg_snapshot_item *item,
 						size_t size)
 {
 	size_t max = (size_t)(item->head_ptr + item->entry.size);
 	size_t cur = (size_t)(item->curr_ptr + size);
+	u64 *marker = dbg_snapshot_legacy_kmsg_marker(item);
 
+	if (marker)
+		max = (size_t)marker;
 	return (unlikely(cur > max)) ? -1 : 0;
+}
+
+static void dbg_snapshot_kmsg_wrapped(struct dbg_snapshot_item *item)
+{
+	u64 *marker = dbg_snapshot_legacy_kmsg_marker(item);
+
+	if (marker)
+		WRITE_ONCE(*marker, 0x0000000a6c6c7546ULL);
+	dbg_snapshot_set_val_offset(1, DSS_OFFSET_CHECK_EOB);
 }
 
 static void dbg_snapshot_kernel_hook_logger(const char *buf, size_t size)
@@ -436,7 +458,7 @@ static void dbg_snapshot_kernel_hook_logger(const char *buf, size_t size)
 
 	spin_lock_irqsave(&lock, flags);
 	if (dbg_snapshot_check_eob(item, size)) {
-		dbg_snapshot_set_val_offset(1, DSS_OFFSET_CHECK_EOB);
+		dbg_snapshot_kmsg_wrapped(item);
 		item->curr_ptr = item->head_ptr;
 	}
 
@@ -507,7 +529,7 @@ void dbg_snapshot_hook_logger(const char *buf, size_t size,
 	}
 	if (dbg_snapshot_check_eob(item, size)) {
 		if (id == DSS_ITEM_KERNEL_ID)
-			dbg_snapshot_set_val_offset(1, DSS_OFFSET_CHECK_EOB);
+			dbg_snapshot_kmsg_wrapped(item);
 		item->curr_ptr = item->head_ptr;
 #if IS_ENABLED(CONFIG_SEC_PM_DEBUG)
 		sec_log_full = true;
@@ -1430,6 +1452,10 @@ static int dbg_snapshot_probe(struct platform_device *pdev)
 	dbg_snapshot_init_desc(&pdev->dev);
 	if (dbg_snapshot_rmem_setup(&pdev->dev)) {
 		dev_err(&pdev->dev, "%s failed\n", __func__);
+		return -ENODEV;
+	}
+	if (!dss_base) {
+		dev_err(&pdev->dev, "missing Debug Snapshot header region\n");
 		return -ENODEV;
 	}
 	dbg_snapshot_fixmap();

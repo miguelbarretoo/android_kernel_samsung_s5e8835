@@ -48,6 +48,13 @@
 	#address-cells = <2>;
 	#size-cells = <1>;
 
+	dss {
+		compatible = "samsung,debug-snapshot";
+		last_kmsg = <1>;
+		console_kmsg = <1>;
+		memory-region = <&dss_header &dss_kernel &dss_platform &dss_kevents>;
+	};
+
 	aliases {
 		pinctrl0 = &pinctrl_0;
 		pinctrl1 = &pinctrl_1;
