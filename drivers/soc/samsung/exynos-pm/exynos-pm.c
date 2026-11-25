@@ -30,6 +30,30 @@ extern void log_wakeup_reason(int irq);
 static struct exynos_pm_info *pm_info;
 static struct exynos_pm_dbg *pm_dbg;
 
+#define EXYNOS990_LEGACY_MODES	14
+#define EXYNOS990_LEGACY_HSI2	13
+#define EXYNOS990_EINT_GROUPS	8
+
+static u32 exynos990_eint_offsets[EXYNOS990_EINT_GROUPS];
+static u32 exynos990_eint_counts[EXYNOS990_EINT_GROUPS];
+static u32 exynos990_eint_masks[] = { 0x060c, 0x061c };
+static u32 exynos990_stat_offsets[2];
+static struct {
+	u32 offset;
+	u32 masks[EXYNOS990_LEGACY_MODES];
+	u32 usb_bits;
+} exynos990_wakeup_masks[ARRAY_SIZE(exynos990_stat_offsets)];
+
+static int exynos_pm_cal_mode(enum sys_powerdown mode)
+{
+#ifdef CONFIG_SOC_EXYNOS9830
+	/* The 4.19 DT indexes HSI2 immediately after USBL2. */
+	if (mode == EXYNOS990_LEGACY_HSI2)
+		return SYS_SLEEP_HSI2ON;
+#endif
+	return mode;
+}
+
 static void exynos_print_wakeup_sources(int irq, const char *name)
 {
 	struct irq_desc *desc;
@@ -70,7 +94,8 @@ static void exynos_show_wakeup_reason_eint(void)
 			u32 gpio;
 			int irq;
 
-			if (eint_wakeup_mask & (1 << (acc_bits + bit)))
+			if (acc_bits + bit >= 64 ||
+			    eint_wakeup_mask & BIT_ULL(acc_bits + bit))
 				continue;
 
 			gpio = exynos_eint_to_pin_num(acc_bits + bit);
@@ -189,33 +214,50 @@ static void exynos_set_wakeupmask(enum sys_powerdown mode)
 {
 	int i;
 	u32 wakeup_int_en = 0;
+	bool mask_usb = otg_is_connect() == 2 || otg_is_connect() == 0;
 
 	/* Set external interrupt mask */
 	for (i = 0; i < pm_info->num_eint_wakeup_mask; i++)
 		exynos_pmu_write(pm_info->eint_wakeup_mask_offset[i], exynos_eint_wake_mask_array[i]);
 
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+		for (i = 0; i < ARRAY_SIZE(exynos990_wakeup_masks); i++) {
+			wakeup_int_en = exynos990_wakeup_masks[i].masks[mode];
+			if (mask_usb)
+				wakeup_int_en &= ~exynos990_wakeup_masks[i].usb_bits;
+			exynos_pmu_write(exynos990_stat_offsets[i], 0);
+			exynos_pmu_write(exynos990_wakeup_masks[i].offset, wakeup_int_en);
+		}
+		return;
+	}
+
 	for (i = 0; i < pm_info->num_wakeup_int_en; i++) {
 		exynos_pmu_write(pm_info->wakeup_stat_offset[i], 0);
 		wakeup_int_en = pm_info->wakeup_int_en[i];
 
-		if (otg_is_connect() == 2 || otg_is_connect() == 0)
+		if (mask_usb && pm_info->usbl2_wakeup_int_en)
 			wakeup_int_en&= ~pm_info->usbl2_wakeup_int_en[i];
 
 		exynos_pmu_write(pm_info->wakeup_int_en_offset[i], wakeup_int_en);
 	}
 
 
-	__raw_writel(pm_info->vgpio_wakeup_inten,
-			pm_info->vgpio2pmu_base + pm_info->vgpio_inten_offset);
+	if (pm_info->vgpio2pmu_base)
+		__raw_writel(pm_info->vgpio_wakeup_inten,
+			     pm_info->vgpio2pmu_base + pm_info->vgpio_inten_offset);
 }
 
 static int exynos_prepare_sys_powerdown(enum sys_powerdown mode)
 {
 	int ret;
 
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830) &&
+	    (unsigned int)mode >= EXYNOS990_LEGACY_MODES)
+		return -EINVAL;
+
 	exynos_set_wakeupmask(mode);
 
-	ret = cal_pm_enter(mode);
+	ret = cal_pm_enter(exynos_pm_cal_mode(mode));
 	if (ret)
 		pr_err("CAL Fail to set powermode\n");
 
@@ -224,12 +266,15 @@ static int exynos_prepare_sys_powerdown(enum sys_powerdown mode)
 
 static void exynos_wakeup_sys_powerdown(enum sys_powerdown mode, bool early_wakeup)
 {
-	if (early_wakeup)
-		cal_pm_earlywakeup(mode);
-	else
-		cal_pm_exit(mode);
+	int cal_mode = exynos_pm_cal_mode(mode);
 
-	__raw_writel(0,	pm_info->vgpio2pmu_base + pm_info->vgpio_inten_offset);
+	if (early_wakeup)
+		cal_pm_earlywakeup(cal_mode);
+	else
+		cal_pm_exit(cal_mode);
+
+	if (pm_info->vgpio2pmu_base)
+		__raw_writel(0, pm_info->vgpio2pmu_base + pm_info->vgpio_inten_offset);
 
 }
 
@@ -256,6 +301,8 @@ extern void gpio_dvs_check_sleepgpio(void);
 
 static int exynos_pm_syscore_suspend(void)
 {
+	int ret;
+
 #ifdef CONFIG_CP_PMUCAL
 	if (!exynos_check_cp_status()) {
 		pr_info("%s %s: sleep canceled by CP reset \n",
@@ -280,14 +327,17 @@ static int exynos_pm_syscore_suspend(void)
 	}
 
 	if (pm_info->is_pcieon_suspend) {
-		exynos_prepare_sys_powerdown(pm_info->pcieon_suspend_mode_idx);
+		ret = exynos_prepare_sys_powerdown(pm_info->pcieon_suspend_mode_idx);
 		pr_info("%s %s: Enter Suspend scenario. pcieon_mode_idx = %d)\n",
 				EXYNOS_PM_PREFIX,__func__, pm_info->pcieon_suspend_mode_idx);
 	} else {
-		exynos_prepare_sys_powerdown(pm_info->suspend_mode_idx);
+		ret = exynos_prepare_sys_powerdown(pm_info->suspend_mode_idx);
 		pr_info("%s %s: Enter Suspend scenario. suspend_mode_idx = %d)\n",
 				EXYNOS_PM_PREFIX,__func__, pm_info->suspend_mode_idx);
 	}
+
+	if (ret)
+		return ret;
 
 	/* Send an IPI if test_early_wakeup flag is set */
 //	if (pm_dbg->test_early_wakeup)
@@ -422,7 +472,8 @@ static void parse_dt_wakeup_stat_names(struct device_node *np)
 	int ret;
 	int size, n, idx = 0;
 
-	root = of_find_node_by_name(np, "wakeup_stats");
+	/* Keep the caller's reference for the remaining DT properties. */
+	root = of_find_node_by_name(of_node_get(np), "wakeup_stats");
 	n = of_get_child_count(root);
 
 	if (pm_info->num_wakeup_stat != n || !n) {
@@ -460,7 +511,7 @@ static void parse_dt_debug_subsystem(struct device_node *np)
 	int ret;
 	int size_name, size_offset = 0;
 
-	child = of_find_node_by_name(np, "debug_subsystem");
+	child = of_find_node_by_name(of_node_get(np), "debug_subsystem");
 
 	if (!child) {
 		pr_err("%s %s: unable to get debug_subsystem value from DT\n",
@@ -558,6 +609,73 @@ free_offset:
 	return ;
 }
 
+static int __init exynos990_pm_parse_wakeup(struct device_node *np)
+{
+	struct device_node *root, *child;
+	struct property *prop;
+	const __be32 *cur;
+	u32 num_eint, bit;
+	int ret, i = 0;
+
+	ret = of_property_read_u32(np, "num-eint", &num_eint);
+	if (ret)
+		return ret;
+	if (!num_eint || num_eint > EXYNOS990_EINT_GROUPS * 8)
+		return -EINVAL;
+
+	root = of_find_node_by_path("/exynos-powermode/wakeup-masks");
+	if (!root)
+		return -ENOENT;
+	ret = -EINVAL;
+	if (of_get_available_child_count(root) != ARRAY_SIZE(exynos990_wakeup_masks))
+		goto put_root;
+
+	for_each_available_child_of_node(root, child) {
+		ret = of_property_read_u32(child, "mask-offset", &exynos990_wakeup_masks[i].offset);
+		if (ret)
+			goto put_child;
+		ret = of_property_read_u32(child, "stat-offset", &exynos990_stat_offsets[i]);
+		if (ret)
+			goto put_child;
+		ret = of_property_read_u32_array(child, "mask",
+						exynos990_wakeup_masks[i].masks,
+						EXYNOS990_LEGACY_MODES);
+		if (ret)
+			goto put_child;
+		of_property_for_each_u32(child, "usbl2_wakeup_int_en", prop, cur, bit) {
+			if (bit >= 32) {
+				ret = -EINVAL;
+				goto put_child;
+			}
+			exynos990_wakeup_masks[i].usb_bits |= BIT(bit);
+		}
+		i++;
+	}
+	of_node_put(root);
+
+	for (i = 0; i < DIV_ROUND_UP(num_eint, 8); i++) {
+		exynos990_eint_offsets[i] = 0xa00 + i * 4;
+		exynos990_eint_counts[i] = min_t(u32, 8, num_eint - i * 8);
+	}
+	pm_info->total_eint_grps = i;
+	pm_info->total_eint_pends = num_eint;
+	pm_info->eint_pend_offsets = exynos990_eint_offsets;
+	pm_info->num_eint_pends = exynos990_eint_counts;
+	pm_info->eint_wakeup_mask_offset = exynos990_eint_masks;
+	pm_info->num_eint_wakeup_mask = ARRAY_SIZE(exynos990_eint_masks);
+	pm_info->wakeup_stat_offset = exynos990_stat_offsets;
+	pm_info->num_wakeup_stat = ARRAY_SIZE(exynos990_stat_offsets);
+	pm_info->wakeup_stat_eint = 12;
+	pm_info->wakeup_stat_rtc = 0;
+	return 0;
+
+put_child:
+	of_node_put(child);
+put_root:
+	of_node_put(root);
+	return ret;
+}
+
 #if defined(CONFIG_SEC_FACTORY)
 static ssize_t asv_info_show(struct device *dev,
 		struct device_attribute *attr,
@@ -624,6 +742,20 @@ static int exynos_pm_drvinit(void)
 			BUG();
 		}
 
+		ret = of_property_read_u32(np, "num-gic", &pm_info->num_gic);
+		if (ret)
+			goto invalid_wakeup;
+		ret = of_property_read_u32(np, "suspend_mode_idx", &pm_info->suspend_mode_idx);
+		if (ret)
+			goto invalid_wakeup;
+
+		if (IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+			ret = exynos990_pm_parse_wakeup(np);
+			if (ret)
+				goto invalid_wakeup;
+			goto wakeup_parsed;
+		}
+
 		pm_info->vgpio2pmu_base = of_iomap(np, 2);
 		if (!pm_info->vgpio2pmu_base) {
 			pr_err("%s %s: unbaled to ioremap VGPIO2PMU base address\n",
@@ -632,13 +764,6 @@ static int exynos_pm_drvinit(void)
 		}
 
 		parse_dt_eint_pend(np);
-
-		ret = of_property_read_u32(np, "num-gic", &pm_info->num_gic);
-		if (ret) {
-			pr_err("%s %s: unabled to get the number of gic from DT\n",
-					EXYNOS_PM_PREFIX, __func__);
-			BUG();
-		}
 
 		ret = of_property_read_u32(np, "wakeup-stat-eint", &pm_info->wakeup_stat_eint);
 		if (ret) {
@@ -654,13 +779,6 @@ static int exynos_pm_drvinit(void)
 			BUG();
 		}
 
-		ret = of_property_read_u32(np, "suspend_mode_idx", &pm_info->suspend_mode_idx);
-		if (ret) {
-			pr_err("%s %s: unabled to get suspend_mode_idx from DT\n",
-					EXYNOS_PM_PREFIX, __func__);
-			BUG();
-		}
-
 		ret = of_property_count_u32_elems(np, "wakeup_stat_offset");
 		if (!ret) {
 			pr_err("%s %s: unabled to get wakeup_stat value from DT\n",
@@ -671,9 +789,6 @@ static int exynos_pm_drvinit(void)
 			pm_info->wakeup_stat_offset = kzalloc(sizeof(unsigned int) * ret, GFP_KERNEL);
 			of_property_read_u32_array(np, "wakeup_stat_offset", pm_info->wakeup_stat_offset, ret);
 		}
-
-		parse_dt_wakeup_stat_names(np);
-		parse_dt_debug_subsystem(np);
 
 		ret = of_property_count_u32_elems(np, "wakeup_int_en_offset");
 		if (!ret) {
@@ -729,6 +844,11 @@ static int exynos_pm_drvinit(void)
 			BUG();
 		}
 
+wakeup_parsed:
+		parse_dt_wakeup_stat_names(np);
+		if (!IS_ENABLED(CONFIG_SOC_EXYNOS9830))
+			parse_dt_debug_subsystem(np);
+
 		ret = of_property_read_u32(np, "wake_lock", &wake_lock);
 		if (ret) {
 			pr_info("%s %s: unabled to get wake_lock from DT\n",
@@ -757,12 +877,22 @@ static int exynos_pm_drvinit(void)
 			}
 		}
 
+		of_node_put(np);
+		goto register_pm;
+
+invalid_wakeup:
+		pr_err("%s invalid wakeup configuration: %d\n", EXYNOS_PM_PREFIX, ret);
+		of_node_put(np);
+		iounmap(pm_info->gic_base);
+		iounmap(pm_info->eint_base);
+		return ret;
 	} else {
 		pr_err("%s %s: failed to have populated device tree\n",
 					EXYNOS_PM_PREFIX, __func__);
 		BUG();
 	}
 
+register_pm:
 	register_syscore_ops(&exynos_pm_syscore_ops);
 #ifdef CONFIG_DEBUG_FS
 	exynos_pm_debugfs_init();
