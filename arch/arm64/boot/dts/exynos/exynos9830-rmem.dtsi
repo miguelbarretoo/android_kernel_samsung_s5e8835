@@ -126,7 +126,7 @@
 			};
 		};
 
-		ramoops {
+		exynos990_ramoops: ramoops {
 			compatible = "ramoops";
 			reg = <0 DSS_LOG_PSTORE_ADDR DSS_LOG_PSTORE_SIZE>;
 			/* Keep the two slots readable by the 4.19 recovery. */

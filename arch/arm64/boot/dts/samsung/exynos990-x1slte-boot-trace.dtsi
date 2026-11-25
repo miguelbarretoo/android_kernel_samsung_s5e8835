@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+/* Keep the first half for crash dumps and protect the recovery pmsg slot. */
+&exynos990_ramoops {
+	reg = <0 0xeb308000 0x4000>;
+	pmsg-size = <0>;
+};
+
+&reserved_memory {
+	boot-trace@eb30c000 {
+		reg = <0 0xeb30c000 0x4000>;
+	};
+};

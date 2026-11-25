@@ -16,6 +16,7 @@
 #include <asm/asm_pointer_auth.h>
 #include <asm/assembler.h>
 #include <asm/boot.h>
+#include <asm/exynos990-boot-trace.h>
 #include <asm/bug.h>
 #include <asm/ptrace.h>
 #include <asm/asm-offsets.h>
@@ -92,7 +93,24 @@
 	 *  x19/x20    __primary_switch()                       callee preserved temp registers
 	 *  x24        __primary_switch() .. relocate_kernel()  current RELR displacement
 	 */
+	.macro	exynos990_boot_mark, marker
+#ifdef CONFIG_MODEL_X1SLTE
+	mov_q	x9, EXYNOS990_BOOT_TRACE_ADDR
+	mov_q	x10, EXYNOS990_BOOT_TRACE_MAGIC
+	str	wzr, [x9]
+	mov	w11, #4
+	str	w11, [x9, #4]
+	str	w11, [x9, #8]
+	mov_q	x11, \marker
+	str	w11, [x9, #12]
+	dsb	sy
+	str	w10, [x9]
+	dsb	sy
+#endif
+	.endm
+
 SYM_CODE_START(primary_entry)
+	exynos990_boot_mark EXYNOS990_BOOT_TRACE_ENTRY
 	bl	preserve_boot_args
 	bl	init_kernel_el			// w0=cpu_boot_mode
 	adrp	x23, __PHYS_OFFSET
@@ -106,6 +124,7 @@ SYM_CODE_START(primary_entry)
 	 * the TCR will have been set.
 	 */
 	bl	__cpu_setup			// initialise processor
+	exynos990_boot_mark EXYNOS990_BOOT_TRACE_PRE_MMU
 	b	__primary_switch
 SYM_CODE_END(primary_entry)
 

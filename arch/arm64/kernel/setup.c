@@ -38,6 +38,8 @@
 #include <asm/cputype.h>
 #include <asm/daifflags.h>
 #include <asm/elf.h>
+#include <asm/exynos990-boot-trace.h>
+#include <asm/early_ioremap.h>
 #include <asm/cpufeature.h>
 #include <asm/cpu_ops.h>
 #include <asm/hypervisor.h>
@@ -293,6 +295,27 @@ u64 cpu_logical_map(unsigned int cpu)
 	return __cpu_logical_map[cpu];
 }
 
+static void __init exynos990_boot_mark_setup_arch(void)
+{
+	void __iomem *mark;
+
+	if (!IS_ENABLED(CONFIG_MODEL_X1SLTE))
+		return;
+
+	mark = early_ioremap(EXYNOS990_BOOT_TRACE_ADDR, 16);
+	if (!mark)
+		return;
+
+	writel_relaxed(0, mark);
+	writel_relaxed(4, mark + 4);
+	writel_relaxed(4, mark + 8);
+	writel_relaxed(EXYNOS990_BOOT_TRACE_SETUP_ARCH, mark + 12);
+	dsb(sy);
+	writel_relaxed(EXYNOS990_BOOT_TRACE_MAGIC, mark);
+	dsb(sy);
+	early_iounmap(mark, 16);
+}
+
 void __init __no_sanitize_address setup_arch(char **cmdline_p)
 {
 	setup_initial_init_mm(_stext, _etext, _edata, _end);
@@ -308,6 +331,7 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 
 	early_fixmap_init();
 	early_ioremap_init();
+	exynos990_boot_mark_setup_arch();
 
 	setup_machine_fdt(__fdt_pointer);
 

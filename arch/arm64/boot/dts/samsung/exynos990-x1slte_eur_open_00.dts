@@ -12,6 +12,7 @@
 /dts-v1/;
 /plugin/;
 #include "exynos9830-x1s_pm_21.dtsi"
+#include "exynos990-x1slte-boot-trace.dtsi"
 #include "exynos990-x1s_common.dtsi"
 #include "exynos_gpio_config_macros.dtsi"
 #include "exynos9830-picasso_nfc_17.dtsi"
