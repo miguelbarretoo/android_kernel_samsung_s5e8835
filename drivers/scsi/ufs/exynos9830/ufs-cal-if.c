@@ -173,23 +173,17 @@ static unsigned long ufs_cal_lock_timeout = 0xFFFFFFFF;
 /* Bridge the legacy S5E9830 CAL callbacks to the 5.15 UFS host handle. */
 void ufs_lld_dme_set(void *h, u32 addr, u32 val)
 {
-	struct ufs_vs_handle *handle = h;
-
-	ufshcd_dme_set(handle->private, addr, val);
+	ufshcd_dme_set(((struct ufs_vs_handle *)h)->hba, addr, val);
 }
 
 void ufs_lld_dme_get(void *h, u32 addr, u32 *val)
 {
-	struct ufs_vs_handle *handle = h;
-
-	ufshcd_dme_get_attr(handle->private, addr, val, DME_LOCAL);
+	ufshcd_dme_get_attr(((struct ufs_vs_handle *)h)->hba, addr, val, DME_LOCAL);
 }
 
 void ufs_lld_dme_peer_set(void *h, u32 addr, u32 val)
 {
-	struct ufs_vs_handle *handle = h;
-
-	ufshcd_dme_set_attr(handle->private, addr, ATTR_SET_NOR, val,
+	ufshcd_dme_set_attr(((struct ufs_vs_handle *)h)->hba, addr, ATTR_SET_NOR, val,
 			   DME_PEER);
 }
 

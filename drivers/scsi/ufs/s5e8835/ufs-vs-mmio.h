@@ -15,6 +15,7 @@ struct ufs_vs_handle {
 	void *pcs;
 	void (*udelay)(u32 us);
 	void *private;
+	void *hba;	/* private is owned by the debug logger */
 };
 
 #define EXYNOS_UFS_MMIO_FUNC(name)					\

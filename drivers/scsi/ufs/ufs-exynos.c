@@ -553,6 +553,11 @@ static void exynos_ufs_set_features(struct ufs_hba *hba)
 			UFSHCD_QUIRK_ALIGN_SG_WITH_PAGE_SIZE |
 			UFSHCI_QUIRK_SKIP_MANUAL_WB_FLUSH_CTRL |
 			UFSHCD_QUIRK_SKIP_DEF_UNIPRO_TIMEOUT_SETTING;
+
+	/* Exynos 990 HCI takes UTRD offsets/PRDT length in bytes, as on 4.19 */
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830))
+		hba->quirks |= UFSHCD_QUIRK_PRDT_BYTE_GRAN |
+			       UFSHCI_QUIRK_BROKEN_REQ_LIST_CLR;
 }
 
 /*
@@ -565,7 +570,7 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 
 	/* refer to hba */
 	ufs->hba = hba;
-	ufs->handle.private = hba;
+	ufs->handle.hba = hba;
 
 	/* configure externals */
 	ret = exynos_ufs_config_externals(ufs);
