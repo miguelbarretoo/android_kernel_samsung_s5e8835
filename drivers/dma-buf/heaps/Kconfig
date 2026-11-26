@@ -23,4 +23,12 @@ config DMABUF_HEAPS_CMA
 	  by the Contiguous Memory Allocator (CMA). If your system has these
 	  regions, you should say Y here.
 
+config DMABUF_HEAPS_ION_COMPAT
+	tristate "Legacy /dev/ion on top of DMA-BUF heaps"
+	depends on DMABUF_HEAPS
+	help
+	  Provide /dev/ion with the 4.14+ ION UAPI (ALLOC and HEAP_QUERY)
+	  for vendor userspace built before DMA-BUF heaps, backing each
+	  legacy ION heap with a DMA-BUF heap.
+
 source "drivers/dma-buf/heaps/samsung/Kconfig"

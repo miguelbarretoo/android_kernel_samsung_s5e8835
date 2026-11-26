@@ -1446,6 +1446,11 @@
 		peritimer-cnt = <0xFFFF>;
 	};
 
+	system_dma_heap {
+		compatible = "samsung,dma-heap-system";
+		dma-heap,name = "system";
+	};
+
 	acpm_ipc {
 		compatible = "samsung,exynos-acpm-ipc";
 		#address-cells = <2>;
