@@ -2028,9 +2028,15 @@
 		use_multistage_wdt; /* Use FIQ debug watchdog */
 	};
 
+	/* 5.15 exynos-reboot binding; values from the 4.19 Exynos 990 driver */
 	reboot {
-		compatible = "exynos,reboot";
-		pmu_base = <0x15860000>;
+		compatible = "samsung,exynos-reboot";
+		samsung,syscon-phandle = <&pmu_system_controller>;
+		reboot-offset = <0x3a00>;	/* SWRESET */
+		reboot-trigger = <0x2>;		/* SWRESET_TRIGGER */
+		shutdown-offset = <0x030c>;	/* PS_HOLD_CONTROL */
+		shutdown-trigger = <0x100>;	/* PS_HOLD_EN */
+		reboot-cmd-offset = <0x0810>;	/* SYSIP_DAT0: boot mode for LK */
 	};
 
 	chipid@10000000 {
