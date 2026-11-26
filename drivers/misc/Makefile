@@ -64,8 +64,10 @@ obj-$(CONFIG_OPEN_DICE)		+= open-dice.o
 obj-y               += samsung/
 
 # TEEGRIS kernel driver
-ccflags-$(CONFIG_TZDEV) += -I$(srctree)/drivers/misc/tzdev/include
-obj-$(CONFIG_TZDEV)     += tzdev/
+tzdev-dir-$(CONFIG_SOC_EXYNOS9830) := tzdev-teegris4
+tzdev-dir := $(or $(tzdev-dir-y),tzdev)
+ccflags-$(CONFIG_TZDEV) += -I$(srctree)/drivers/misc/$(tzdev-dir)/include
+obj-$(CONFIG_TZDEV)     += $(tzdev-dir)/
 obj-$(CONFIG_SAMSUNG_TUI)     += tui/
 
 #

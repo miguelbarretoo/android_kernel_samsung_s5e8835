@@ -508,7 +508,13 @@ source "drivers/misc/habanalabs/Kconfig"
 source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
 source "drivers/misc/samsung/Kconfig"
+# Exynos 990 TEEGRIS v4 firmware speaks the 4.19 BSP tzdev protocol.
+if SOC_EXYNOS9830
+source "drivers/misc/tzdev-teegris4/Kconfig"
+endif
+if !SOC_EXYNOS9830
 source "drivers/misc/tzdev/Kconfig"
+endif
 source "drivers/misc/tui/Kconfig"
 endmenu
 
