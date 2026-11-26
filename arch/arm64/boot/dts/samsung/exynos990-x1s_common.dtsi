@@ -877,7 +877,8 @@
 	status = "okay";
 
 	dr_mode = "otg";
-	maximum-speed = "super-speed-plus";
+	/* diag: USB2 only until the PIPE3 combo PHY is verified on 5.15 */
+	maximum-speed = "high-speed";
 	snps,quirk-frame-length-adjustment = <0x20>;
 	/* snps,u1u2_exitfail_quirk; */
 	/* ux_exit_in_px should be defined in MK, LT */
