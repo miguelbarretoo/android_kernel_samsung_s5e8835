@@ -22,6 +22,9 @@
 		#size-cells = <1>;
 		ranges;
 
+		/* 4.19 constants: NUM_CHANNEL, BUS_WIDTH (MIF and INT), MIF_UTIL, INT_UTIL */
+		bw_params = <4 16 16 65 70>;
+
 		list-scen = "default",
 			    "mfc_uhd",
 			    "mfc_uhd_10bit",
