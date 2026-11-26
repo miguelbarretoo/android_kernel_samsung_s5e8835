@@ -48,7 +48,6 @@ struct ion_heap_query {
 
 #define ION_IOC_MAGIC		'I'
 #define ION_IOC_ALLOC		_IOWR(ION_IOC_MAGIC, 0, struct ion_allocation_data)
-#define ION_IOC_FREE		_IOWR(ION_IOC_MAGIC, 1, int)	/* deprecated no-op */
 #define ION_IOC_HEAP_QUERY	_IOWR(ION_IOC_MAGIC, 8, struct ion_heap_query)
 
 struct ion_compat_heap {
@@ -150,9 +149,8 @@ static long ion_compat_ioctl(struct file *f, unsigned int cmd, unsigned long arg
 		return ion_compat_alloc((void __user *)arg);
 	case ION_IOC_HEAP_QUERY:
 		return ion_compat_query((void __user *)arg);
-	case ION_IOC_FREE:
-		return 0;
 	default:
+		/* includes ION_IOC_FREE: libion probes it to tell legacy ION apart */
 		return -ENOTTY;
 	}
 }
