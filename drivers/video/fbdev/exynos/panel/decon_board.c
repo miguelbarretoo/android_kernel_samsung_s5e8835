@@ -259,7 +259,7 @@ static int print_action(struct action_info *action)
 
 static int secprintf(char *buf, size_t size, s64 nsec)
 {
-	struct timeval tv = ns_to_timeval(nsec);
+	struct __kernel_old_timeval tv = ns_to_kernel_old_timeval(nsec);
 
 	return scnprintf(buf, size, "%lu.%06lu", (unsigned long)tv.tv_sec, tv.tv_usec);
 }

@@ -1786,7 +1786,7 @@ int excute_seqtbl_nolock(struct panel_device *panel, struct seqinfo *seqtbl, int
 	int ret;
 	struct seqinfo *tbl;
 	struct panel_info *panel_data;
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 	s64 elapsed_usec;
 
 	if (panel == NULL) {
@@ -1804,7 +1804,7 @@ int excute_seqtbl_nolock(struct panel_device *panel, struct seqinfo *seqtbl, int
 
 	panel_data = &panel->panel_data;
 	tbl = seqtbl;
-	ktime_get_ts(&cur_ts);
+	ktime_get_ts64(&cur_ts);
 
 	if (panel_data->props.key[CMD_LEVEL_1] != 0 ||
 			panel_data->props.key[CMD_LEVEL_2] != 0 ||
@@ -1847,9 +1847,9 @@ do_exit:
 		panel_data->props.key[CMD_LEVEL_3] = 0;
 	}
 
-	ktime_get_ts(&last_ts);
-	delta_ts = timespec_sub(last_ts, cur_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	ktime_get_ts64(&last_ts);
+	delta_ts = timespec64_sub(last_ts, cur_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	panel_dbg("seq:%s done (elapsed %2lld.%03lld msec)\n",
 			tbl[index].name, elapsed_usec / 1000, elapsed_usec % 1000);
 

@@ -1103,9 +1103,9 @@ static int read_mcd_resistance(struct panel_device *panel)
 		(1U << 2),
 	};
 	s64 elapsed_usec;
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 
-	ktime_get_ts(&last_ts);
+	ktime_get_ts64(&last_ts);
 
 	ret = panel_set_gpio_irq(&panel->gpio[PANEL_GPIO_DISP_DET], false);
 	if (ret < 0)
@@ -1159,9 +1159,9 @@ out:
 	ret = panel_set_gpio_irq(&panel->gpio[PANEL_GPIO_DISP_DET], true);
 	if (ret < 0)
 		panel_warn("do not support irq\n");
-	ktime_get_ts(&cur_ts);
-	delta_ts = timespec_sub(cur_ts, last_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	ktime_get_ts64(&cur_ts);
+	delta_ts = timespec64_sub(cur_ts, last_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	panel_info("done (elapsed %2lld.%03lld msec)\n",
 			elapsed_usec / 1000, elapsed_usec % 1000);
 

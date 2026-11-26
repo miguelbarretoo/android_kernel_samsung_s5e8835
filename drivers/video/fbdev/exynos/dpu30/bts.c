@@ -623,7 +623,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 #endif
 
 		if (decon->bts.max_disp_freq <= decon->bts.prev_max_disp_freq) {
-			pm_qos_update_request(&decon->bts.disp_qos,
+			exynos_pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
 			DPU_DEBUG_BTS("\tapply max_disp_freq(%d->%d) fps(%d)\n",
 					decon->bts.prev_max_disp_freq, decon->bts.max_disp_freq, decon->bts.fps);
@@ -646,7 +646,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 #endif
 
 		if (decon->bts.max_disp_freq > decon->bts.prev_max_disp_freq) {
-			pm_qos_update_request(&decon->bts.disp_qos,
+			exynos_pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
 			DPU_DEBUG_BTS("\tapply max_disp_freq(%d->%d) fps(%d)\n",
 					decon->bts.prev_max_disp_freq, decon->bts.max_disp_freq, decon->bts.fps);
@@ -682,9 +682,9 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		return;
 
 	/* min INT freq in screen(LCD/DP) on state : 200Mhz */
-	pm_qos_update_request(&decon->bts.int_qos, 200 * 1000);
+	exynos_pm_qos_update_request(&decon->bts.int_qos, 200 * 1000);
 	DPU_DEBUG_BTS("Get initial INT freq(%lu)\n",
-			exynos_devfreq_get_domain_freq(DEVFREQ_INT));
+			dpu_devfreq_get_domain_freq(DEVFREQ_INT));
 
 
 	decon->bts.fps = decon->lcd_info->fps;
@@ -708,11 +708,11 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		 * it must not be set. if not, underrun can occur.
 		 */
 
-		if (exynos_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
-			pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
+		if (dpu_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
+			exynos_pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
 
 		DPU_DEBUG_BTS("%s -: Get initial disp freq(%lu)\n", __func__,
-				exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
+				dpu_devfreq_get_domain_freq(DEVFREQ_DISP));
 
 		return;
 	}
@@ -722,42 +722,42 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		return;
 
 	if (pixelclock >= 500000000) { /*UHD 60Hz*/
-		if (pm_qos_request_active(&decon->bts.mif_qos))
-			pm_qos_update_request(&decon->bts.mif_qos, 1794 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.mif_qos))
+			exynos_pm_qos_update_request(&decon->bts.mif_qos, 1794 * 1000);
 		else
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 
-		if (pm_qos_request_active(&decon->bts.int_qos))
-			pm_qos_update_request(&decon->bts.int_qos, 534 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.int_qos))
+			exynos_pm_qos_update_request(&decon->bts.int_qos, 534 * 1000);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
-		if (pm_qos_request_active(&decon->bts.disp_qos))
-			pm_qos_update_request(&decon->bts.disp_qos, 533 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.disp_qos))
+			exynos_pm_qos_update_request(&decon->bts.disp_qos, 533 * 1000);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
 		bts_add_scenario(decon->bts.scen_idx[DPU_BS_DP_DEFAULT]);
 	} else if (pixelclock > 148500000) {
-		if (pm_qos_request_active(&decon->bts.mif_qos))
-			pm_qos_update_request(&decon->bts.mif_qos, 1794 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.mif_qos))
+			exynos_pm_qos_update_request(&decon->bts.mif_qos, 1794 * 1000);
 		else
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 
-		if (pm_qos_request_active(&decon->bts.int_qos))
-			pm_qos_update_request(&decon->bts.int_qos, 534 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.int_qos))
+			exynos_pm_qos_update_request(&decon->bts.int_qos, 534 * 1000);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
-		if (pm_qos_request_active(&decon->bts.disp_qos))
-			pm_qos_update_request(&decon->bts.disp_qos, 400 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.disp_qos))
+			exynos_pm_qos_update_request(&decon->bts.disp_qos, 400 * 1000);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
 		bts_add_scenario(decon->bts.scen_idx[DPU_BS_DP_DEFAULT]);
 	} else {
-		if (pm_qos_request_active(&decon->bts.mif_qos))
-			pm_qos_update_request(&decon->bts.mif_qos, 845 * 1000);
+		if (exynos_pm_qos_request_active(&decon->bts.mif_qos))
+			exynos_pm_qos_update_request(&decon->bts.mif_qos, 845 * 1000);
 		else
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 	}
@@ -778,24 +778,24 @@ void dpu_bts_release_bw(struct decon_device *decon)
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		bts_update_bw(decon->bts.bw_idx, bw);
 		decon->bts.prev_total_bw = 0;
-		pm_qos_update_request(&decon->bts.disp_qos, 0);
+		exynos_pm_qos_update_request(&decon->bts.disp_qos, 0);
 		decon->bts.prev_max_disp_freq = 0;
 
-		pm_qos_update_request(&decon->bts.int_qos, 0);
+		exynos_pm_qos_update_request(&decon->bts.int_qos, 0);
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
 #if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
-		if (pm_qos_request_active(&decon->bts.mif_qos))
-			pm_qos_update_request(&decon->bts.mif_qos, 0);
+		if (exynos_pm_qos_request_active(&decon->bts.mif_qos))
+			exynos_pm_qos_update_request(&decon->bts.mif_qos, 0);
 		else
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 
-		if (pm_qos_request_active(&decon->bts.int_qos))
-			pm_qos_update_request(&decon->bts.int_qos, 0);
+		if (exynos_pm_qos_request_active(&decon->bts.int_qos))
+			exynos_pm_qos_update_request(&decon->bts.int_qos, 0);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
-		if (pm_qos_request_active(&decon->bts.disp_qos))
-			pm_qos_update_request(&decon->bts.disp_qos, 0);
+		if (exynos_pm_qos_request_active(&decon->bts.disp_qos))
+			exynos_pm_qos_update_request(&decon->bts.disp_qos, 0);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
@@ -817,7 +817,7 @@ void dpu_bts_hiber_release_bw(struct decon_device *decon)
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		bts_update_bw(decon->bts.bw_idx, bw);
 		decon->bts.prev_total_bw = 0;
-		pm_qos_update_request(&decon->bts.disp_qos, 0);
+		exynos_pm_qos_update_request(&decon->bts.disp_qos, 0);
 		decon->bts.prev_max_disp_freq = 0;
 	}
 	DPU_DEBUG_BTS("%s -\n", __func__);
@@ -884,18 +884,18 @@ void dpu_bts_init(struct decon_device *decon)
 	DPU_DEBUG_BTS("[Init: D%d] resol clock = %d Khz @%d fps\n",
 		decon->id, decon->bts.resol_clk, decon->bts.fps);
 
-	pm_qos_add_request(&decon->bts.mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
-	pm_qos_add_request(&decon->bts.int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
-	pm_qos_add_request(&decon->bts.disp_qos, PM_QOS_DISPLAY_THROUGHPUT, 0);
+	exynos_pm_qos_add_request(&decon->bts.mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
+	exynos_pm_qos_add_request(&decon->bts.int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
+	exynos_pm_qos_add_request(&decon->bts.disp_qos, PM_QOS_DISPLAY_THROUGHPUT, 0);
 	decon->bts.scen_updated = 0;
 
 	if (decon->id == 0) {
 		/* min INT freq in LCD screen on state : 200Mhz
 		 * This is necessary because of bootloader display case
 		 */
-		pm_qos_update_request(&decon->bts.int_qos, 200 * 1000);
+		exynos_pm_qos_update_request(&decon->bts.int_qos, 200 * 1000);
 		DPU_DEBUG_BTS("[Init] INT freq(%lu)\n",
-				exynos_devfreq_get_domain_freq(DEVFREQ_INT));
+				dpu_devfreq_get_domain_freq(DEVFREQ_INT));
 	}
 
 	for (i = 0; i < BTS_DPP_MAX; ++i) {
@@ -918,9 +918,9 @@ void dpu_bts_deinit(struct decon_device *decon)
 		return;
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
-	pm_qos_remove_request(&decon->bts.disp_qos);
-	pm_qos_remove_request(&decon->bts.int_qos);
-	pm_qos_remove_request(&decon->bts.mif_qos);
+	exynos_pm_qos_remove_request(&decon->bts.disp_qos);
+	exynos_pm_qos_remove_request(&decon->bts.int_qos);
+	exynos_pm_qos_remove_request(&decon->bts.mif_qos);
 	DPU_DEBUG_BTS("%s -\n", __func__);
 }
 
@@ -948,11 +948,11 @@ void dpu_bts_pan_display(struct decon_device *decon, struct decon_win_config *co
 	 * it must not be set. if not, underrun can occur.
 	 */
 
-	if (exynos_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
-		pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
+	if (dpu_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
+		exynos_pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
 
 	DPU_DEBUG_BTS("%s -: Get initial disp freq (%lu)\n", __func__,
-		exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
+		dpu_devfreq_get_domain_freq(DEVFREQ_DISP));
 
 	DPU_DEBUG_BTS("%s -\n", __func__);
 }

@@ -11,6 +11,13 @@
 #ifndef __PANEL_H__
 #define __PANEL_H__
 
+#ifndef FB_EARLY_EVENT_BLANK
+#define FB_EARLY_EVENT_BLANK	0x10	/* 4.19 fbmem only: never sent on 5.15 */
+#endif
+#ifndef FB_EVENT_FB_REGISTERED
+#define FB_EVENT_FB_REGISTERED	0x05	/* removed in 5.15: never sent */
+#endif
+
 #include <linux/lcd.h>
 #include <linux/backlight.h>
 #include <linux/spi/spi.h>

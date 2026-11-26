@@ -36,7 +36,7 @@
 #if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-cpupm.h>
 #endif
-#include <soc/samsung/exynos-pmu.h>
+#include <soc/samsung/exynos-pmu-if.h>
 
 #include <linux/of_reserved_mem.h>
 #include "../../../../../mm/internal.h"
@@ -870,9 +870,9 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 //	int i, decon_cnt;
 
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
-			exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
-			exynos_devfreq_get_domain_freq(DEVFREQ_INT),
-			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
+			dpu_devfreq_get_domain_freq(DEVFREQ_MIF),
+			dpu_devfreq_get_domain_freq(DEVFREQ_INT),
+			dpu_devfreq_get_domain_freq(DEVFREQ_DISP));
 
 #if 0
 	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
@@ -2108,7 +2108,7 @@ static int dsim_probe(struct platform_device *pdev)
 	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
 
 #if defined(CONFIG_CPU_IDLE)
-	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
+	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev), 0);
 	dsim_info("dsim idle_ip_index[%d]\n", dsim->idle_ip_index);
 	if (dsim->idle_ip_index < 0)
 		dsim_warn("idle ip index is not provided for dsim\n");

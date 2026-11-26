@@ -393,7 +393,7 @@ static int exynos_panel_register(struct exynos_panel_device *panel, u32 id)
 	return 0;
 }
 
-static int __match_panel_v4l2_subdev(struct device *dev, void *data)
+static int __match_panel_v4l2_subdev(struct device *dev, const void *data)
 {
 	struct panel_device *panel_drv;
 	struct exynos_panel_device *panel;

@@ -119,7 +119,7 @@ struct dev_match_cb {
 };
 
 
-static int __dpu_match_dev(struct device *dev, void *data)
+static int __dpu_match_dev(struct device *dev, const void *data)
 {
 	int i, ret = 0;
 	struct decon_device *decon = (struct decon_device *)data;	
@@ -414,7 +414,7 @@ void dpu_dump_afbc_info(void)
 			if (!afbc_info->is_afbc[j])
 				continue;
 
-			v_addr[j] = dma_buf_vmap(afbc_info->dma_buf[j]);
+			v_addr[j] = decon_dma_buf_vmap(afbc_info->dma_buf[j]);
 			if (IS_ERR_OR_NULL(v_addr[j])) {
 				decon_err("%s: Failed to get v_addr (err %pK)\n", __func__, v_addr[j]);
 				return;
@@ -423,7 +423,7 @@ void dpu_dump_afbc_info(void)
 			decon_info("\t[DMA%d] Base(0x%p), KV(0x%p), size(%d)\n",
 					j, (void *)afbc_info->dma_addr[j],
 					v_addr[j], size[j]);
-			dma_buf_vunmap(afbc_info->dma_buf[j], v_addr[j]);
+			decon_dma_buf_vunmap(afbc_info->dma_buf[j], v_addr[j]);
 		}
 
 		afbc_info = &decon->d.cur_afbc_info;
@@ -432,7 +432,7 @@ void dpu_dump_afbc_info(void)
 			if (!afbc_info->is_afbc[j])
 				continue;
 
-			v_addr[j] = dma_buf_vmap(afbc_info->dma_buf[j]);
+			v_addr[j] = decon_dma_buf_vmap(afbc_info->dma_buf[j]);
 			if (IS_ERR_OR_NULL(v_addr[j])) {
 				decon_err("%s: Failed to get v_addr (err %pK)\n", __func__, v_addr[j]);
 				return;
@@ -441,7 +441,7 @@ void dpu_dump_afbc_info(void)
 			decon_info("\t[DMA%d] Base(0x%p), KV(0x%p), size(%d)\n",
 					j, (void *)afbc_info->dma_addr[j],
 					v_addr[j], size[j]);
-			dma_buf_vunmap(afbc_info->dma_buf[j], v_addr[j]);
+			decon_dma_buf_vunmap(afbc_info->dma_buf[j], v_addr[j]);
 		}
 	}
 }

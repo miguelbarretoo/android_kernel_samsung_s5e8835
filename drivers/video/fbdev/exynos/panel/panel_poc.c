@@ -1061,7 +1061,7 @@ int set_panel_poc(struct panel_poc_device *poc_dev, u32 cmd, void *arg)
 	struct panel_poc_info *poc_info = &poc_dev->poc_info;
 	struct panel_device *panel = to_panel_device(poc_dev);
 	int ret = 0;
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 	s64 elapsed_msec;
 	int addr = -1, len = -1, index;
 	int partition_size, partition_addr;
@@ -1072,7 +1072,7 @@ int set_panel_poc(struct panel_poc_device *poc_dev, u32 cmd, void *arg)
 	}
 
 	panel_info("%s +\n", poc_op[cmd]);
-	ktime_get_ts(&last_ts);
+	ktime_get_ts64(&last_ts);
 
 	switch (cmd) {
 	case POC_OP_ERASE:
@@ -1300,9 +1300,9 @@ int set_panel_poc(struct panel_poc_device *poc_dev, u32 cmd, void *arg)
 		break;
 	}
 
-	ktime_get_ts(&cur_ts);
-	delta_ts = timespec_sub(cur_ts, last_ts);
-	elapsed_msec = timespec_to_ns(&delta_ts) / 1000000;
+	ktime_get_ts64(&cur_ts);
+	delta_ts = timespec64_sub(cur_ts, last_ts);
+	elapsed_msec = timespec64_to_ns(&delta_ts) / 1000000;
 	panel_info("%s (elapsed %lld.%03lld sec) -\n", poc_op[cmd],
 			elapsed_msec / 1000, elapsed_msec % 1000);
 

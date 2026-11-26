@@ -221,8 +221,7 @@ void exynos_display_modes_update_panel_info(struct exynos_panel_device *panel,
 	for (i = 0; i < exynos_modes->num_modes; i++) {
 		/* copy to display_mode array for compatibility */
 		edmi = container_of(exynos_modes->modes[i],
-				struct exynos_display_mode_info, mode),
-				  sizeof(struct exynos_display_mode_info);
+				struct exynos_display_mode_info, mode);
 		memcpy(&info->display_mode[i], edmi, sizeof(*edmi));
 		info->display_mode[i].mode.index = i;
 		exynos_mode_info_debug_printmodeline(&info->display_mode[i]);

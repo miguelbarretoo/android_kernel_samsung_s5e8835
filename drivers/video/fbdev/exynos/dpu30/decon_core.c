@@ -40,7 +40,7 @@
 #endif
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
 #include <soc/samsung/exynos-devfreq.h>
-#include <soc/samsung/exynos-debug.h>
+#include "../dpu30/exynos-debug-compat.h"
 
 
 #include "format.h"
@@ -56,7 +56,7 @@
 #include "dqe.h"
 #endif
 
-#include "../../../../iommu/exynos-iommu.h"
+#include "../../../../iommu/exynos990/exynos-iommu.h"
 
 
 
@@ -407,7 +407,7 @@ static void decon_free_unused_buf(struct decon_device *decon,
 	decon_info("%s, win[%d]plane[%d]\n", __func__, win, plane);
 
 	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
-		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
+		iovmm_unmap(dma->attachment->dev, dma->dma_addr);
 		DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_UNMAP, &decon->sd,
 				dma->dma_addr, dma->dpp_ch, dma->sg_table);
 		decon->d.buf_cnt.iovmm_unmap_cnt++;
@@ -454,7 +454,7 @@ static void decon_free_dma_buf(struct decon_device *decon,
 	}
 
 	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
-		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
+		iovmm_unmap(dma->attachment->dev, dma->dma_addr);
 		DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_UNMAP, &decon->sd, dma->dma_addr,
 				dma->dpp_ch, dma->sg_table);
 		decon->d.buf_cnt.iovmm_unmap_cnt++;
@@ -556,9 +556,9 @@ int _decon_tui_protection(bool tui_en)
 #if defined(CONFIG_EXYNOS_BTS)
 		decon->bts.ops->bts_acquire_bw(decon);
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
-				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
-				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
-				exynos_devfreq_get_domain_freq(DEVFREQ_DISP),
+				dpu_devfreq_get_domain_freq(DEVFREQ_MIF),
+				dpu_devfreq_get_domain_freq(DEVFREQ_INT),
+				dpu_devfreq_get_domain_freq(DEVFREQ_DISP),
 				decon->bts.prev_total_bw,
 				decon->bts.total_bw);
 #endif
@@ -569,9 +569,9 @@ int _decon_tui_protection(bool tui_en)
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
-				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
-				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
-				exynos_devfreq_get_domain_freq(DEVFREQ_DISP),
+				dpu_devfreq_get_domain_freq(DEVFREQ_MIF),
+				dpu_devfreq_get_domain_freq(DEVFREQ_INT),
+				dpu_devfreq_get_domain_freq(DEVFREQ_DISP),
 				decon->bts.prev_total_bw,
 				decon->bts.total_bw);
 #endif
@@ -1774,10 +1774,14 @@ static unsigned int decon_map_ion_handle(struct decon_device *decon,
 	decon->d.buf_cnt.map_attach_cnt++;
 
 	/* This is DVA(Device Virtual Address) for setting base address SFR */
-	dma->dma_addr = ion_iovmm_map(dma->attachment, 0, dma->dma_buf->size,
-				      DMA_TO_DEVICE, 0);
+	/*
+	 * shortcut: maps per frame; 4.19 ION cached the IOVA in the buffer
+	 * until it was freed. Cache it if map/unmap shows up in profiles.
+	 */
+	dma->dma_addr = iovmm_map(dma->attachment->dev, dma->sg_table->sgl, 0,
+				  dma->dma_buf->size, DMA_TO_DEVICE, 0);
 	if (IS_ERR_VALUE(dma->dma_addr)) {
-		decon_err("ion_iovmm_map() failed: %pa\n", &dma->dma_addr);
+		decon_err("iovmm_map() failed: %pa\n", &dma->dma_addr);
 		decon_err("remaining_frame : %d", atomic_read(&decon->up.remaining_frame));
 
 		decon_info("attached count : %d\n", attach_count);
@@ -2205,7 +2209,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 				goto dpp_config;
 			}
 
-			video_meta = (struct exynos_video_meta *)dma_buf_vmap(meta_dma_buf);
+			video_meta = (struct exynos_video_meta *)decon_dma_buf_vmap(meta_dma_buf);
 			if (IS_ERR_OR_NULL(video_meta)) {
 				decon_err("%s: failed to map meta data\n", __func__);
 				goto dpp_config;
@@ -2217,7 +2221,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 				memcpy(&dpp_config.hdr_info.lut, video_meta->sHdrDynamicInfo.reserved,
 					sizeof(unsigned int) * MAX_HDR10P_LUT);
 
-			dma_buf_vunmap(meta_dma_buf, video_meta);
+			decon_dma_buf_vunmap(meta_dma_buf, video_meta);
 		}
 dpp_config:
 #endif
@@ -2315,7 +2319,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 				dma_bufs[win_id][0].dma_buf;
 			decon_info("DMA%d(WIN%d): dmabuf=0x%p\n",
 				DPU_CH2DMA(i), win_id, decon->d.dmabuf[win_id][0]);
-			v_addr = dma_buf_vmap(dma_bufs[win_id][0].dma_buf);
+			v_addr = decon_dma_buf_vmap(dma_bufs[win_id][0].dma_buf);
 			if (IS_ERR_OR_NULL(v_addr)) {
 				decon_err("%s: failed to map afbc buffer\n",
 						__func__);
@@ -2326,7 +2330,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 			decon_info("DV(0x%p), KV(0x%p), size(%d)\n",
 					(void *)dma_bufs[win_id][0].dma_addr,
 					v_addr, size);
-			dma_buf_vunmap(dma_bufs[win_id][0].dma_buf, v_addr);
+			decon_dma_buf_vunmap(dma_bufs[win_id][0].dma_buf, v_addr);
 		}
 	}
 
@@ -2742,7 +2746,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 		decon_err("hdr metadata address is NULL\n");
 		return -EINVAL;
 	}
-	video_meta = (struct exynos_video_meta *)dma_buf_vmap(
+	video_meta = (struct exynos_video_meta *)decon_dma_buf_vmap(
 			regs->dma_buf_data[win_num][mp_idx].dma_buf);
 	if (IS_ERR_OR_NULL(video_meta)) {
 		decon_err("Failed to get virtual address (err %pK)\n", video_meta);
@@ -2757,7 +2761,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 	 * Also current hdr_static_info is not copied.
 	 */
 	if (hdr_cmp == 0) {
-		dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
+		decon_dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 		return 0;
 	}
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
@@ -2770,7 +2774,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 	memcpy(&decon->prev_hdr_info,
 			&video_meta->shdr_static_info,
 			sizeof(struct exynos_hdr_static_info));
-	dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
+	decon_dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 
 	return 0;
 
@@ -2782,7 +2786,7 @@ err_hdr_io:
 	 */
 	decon_err("hdr metadata info subdev call is failed\n");
 
-	dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
+	decon_dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 
 	return -EFAULT;
 }
@@ -2965,7 +2969,7 @@ static void decon_handle_readback_buffer(struct decon_device *decon,
 	if (regs->readback.drm) {
 		for (i = 0; i < fmt_info->num_buffers; ++i) {
 			/* kernel virtual */
-			buf_addr = dma_buf_vmap(decon->readback.dma_buf_data[i].dma_buf);
+			buf_addr = decon_dma_buf_vmap(decon->readback.dma_buf_data[i].dma_buf);
 			if (IS_ERR_OR_NULL(buf_addr)) {
 				decon_err("%s: failed to map readback buffer\n",
 						__func__);
@@ -2973,7 +2977,7 @@ static void decon_handle_readback_buffer(struct decon_device *decon,
 			}
 			buf_size = regs->dma_buf_data[decon->dt.wb_win][i].dma_buf->size;
 			memset(buf_addr, 0x00, buf_size);
-			dma_buf_vunmap(decon->readback.dma_buf_data[i].dma_buf, buf_addr);
+			decon_dma_buf_vunmap(decon->readback.dma_buf_data[i].dma_buf, buf_addr);
 		}
 	}
 
@@ -3024,7 +3028,7 @@ static int decon_wait_mafpc_complete(struct decon_device *decon)
 static void decon_update_regs(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
-	struct decon_dma_buf_data old_dma_bufs[decon->dt.max_win][MAX_PLANE_CNT];
+	struct decon_dma_buf_data old_dma_bufs[MAX_DECON_WIN][MAX_PLANE_CNT];
 	int old_plane_cnt[MAX_DECON_WIN];
 	int import_cnt;
 	ktime_t import_time;
@@ -4885,9 +4889,9 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 		goto err_share_dma_buf;
 	}
 
-	vaddr = dma_buf_vmap(buf);
+	vaddr = decon_dma_buf_vmap(buf);
 	if (IS_ERR_OR_NULL(vaddr)) {
-		dev_err(decon->dev, "dma_buf_vmap() failed\n");
+		dev_err(decon->dev, "decon_dma_buf_vmap() failed\n");
 		goto err_map;
 	}
 
@@ -4895,7 +4899,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	fbi->screen_base = vaddr;
 
-	dma_buf_vunmap(buf, vaddr);
+	decon_dma_buf_vunmap(buf, vaddr);
 
 	fbi->screen_base = NULL;
 
@@ -4967,9 +4971,9 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 		goto err_share_dma_buf;
 	}
 
-	vaddr = dma_buf_vmap(buf);
+	vaddr = decon_dma_buf_vmap(buf);
 	if (IS_ERR_OR_NULL(v_addr)) {
-		dev_err(decon->dev, "dma_buf_vmap() failed\n");
+		dev_err(decon->dev, "decon_dma_buf_vmap() failed\n");
 		goto err_map;
 	}
 
@@ -4977,7 +4981,7 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 
 	fbi->screen_base = vaddr;
 
-	dma_buf_vunmap(buf, vaddr);
+	decon_dma_buf_vunmap(buf, vaddr);
 	fbi->screen_base = NULL;
 
 	if (decon->dt.out_type == DECON_OUT_DP) {
@@ -5798,10 +5802,7 @@ static void decon_shutdown(struct platform_device *pdev)
 #endif
 	decon_enter_shutdown(decon);
 
-	if (!lock_fb_info(fbinfo)) {
-		decon_warn("%s: fblock is failed\n", __func__);
-		return;
-	}
+	lock_fb_info(fbinfo);
 
 	decon_info("%s + state:%d\n", __func__, decon->state);
 	DPU_EVENT_LOG(DPU_EVT_DECON_SHUTDOWN, &decon->sd, ktime_set(0, 0));

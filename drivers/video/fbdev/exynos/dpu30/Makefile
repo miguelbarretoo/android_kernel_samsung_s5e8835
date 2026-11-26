@@ -33,3 +33,6 @@ obj-y += mcd_hdr/
 obj-$(CONFIG_SUPPORT_MCD_MOTTO_TUNE) += dsim_motto.o
 
 ccflags-$(CONFIG_SAMSUNG_TUI)    += -Idrivers/misc/tui
+
+# 4.19 vendor code built with gcc: big stack frames warn instead of failing under clang
+ccflags-y += -Wno-error=frame-larger-than

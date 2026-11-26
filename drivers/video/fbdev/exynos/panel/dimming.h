@@ -231,7 +231,7 @@ typedef long long mytime_t;
 #define gettime(t)	((t) = clock())
 #define difftime(t1, t2)	(((t2) - (t1)) * 1000000 / CLOCKS_PER_SEC)
 #else
-typedef struct timespec mytime_t;
+typedef struct timespec64 mytime_t;
 #define gettime(t)	(clock_gettime(CLOCK_MONOTONIC, &(t)))
 #define BILLION 1000000000L
 #define difftime(t1, t2)	((BILLION * ((t2).tv_sec - (t1).tv_sec) + (t2).tv_nsec - (t1).tv_nsec) / 1000)
@@ -239,14 +239,15 @@ typedef struct timespec mytime_t;
 #endif	/* __KERNEL__ */
 #endif	/* DEBUG_EXCUTION_TIME */
 
-#define in_range(i, r)					\
+/* renamed from in_range(), which 5.15 <linux/minmax.h> defines differently */
+#define dim_in_range(i, r)					\
 	((r).from <= (r).to) ?				\
 	((r).from <= (i) && (i) < (r).to) :	\
 	((r).from >= (i) && (i) > (r).to)
 
 #define for_each_range(i, r)	\
 for ((i) = (r).from;		\
-	(i) != (r).to && in_range(i, r);			\
+	(i) != (r).to && dim_in_range(i, r);			\
 	(i) += (r).step)
 
 #define for_each_tp(__pos__)	\

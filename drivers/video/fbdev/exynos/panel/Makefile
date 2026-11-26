@@ -14,7 +14,9 @@ obj-$(CONFIG_EXYNOS_DECON_LCD_SYSFS) += sysfs.o
 obj-$(CONFIG_EXYNOS_DECON_LCD_SPI) += spi.o
 obj-$(CONFIG_EXYNOS_DECON_LCD_COPR) += copr.o
 obj-$(CONFIG_DISPLAY_USE_INFO) += dpui.o
-obj-$(CONFIG_PANEL_NOTIFY) += panel_notify.o
+# 5.15 SEC_PANEL_NOTIFIER_V2 already provides panel_notifier_*(); the 4.19
+# events it carries do not collide with the one zram listens to (3).
+obj-$(CONFIG_PANEL_NOTIFY) += $(if $(CONFIG_SEC_PANEL_NOTIFIER_V2),,panel_notify.o)
 obj-$(CONFIG_SUPPORT_DDI_FLASH) += panel_poc.o
 obj-$(CONFIG_EXTEND_LIVE_CLOCK) += aod/aod_drv.o
 obj-$(CONFIG_SUPPORT_POC_SPI) += panel_spi.o
@@ -39,3 +41,6 @@ obj-$(CONFIG_EXYNOS_DECON_LCD_S6E3HAC) += s6e3hac/
 obj-$(CONFIG_EXYNOS_DECON_LCD_EA8076) += ea8076/
 obj-$(CONFIG_EXYNOS_DECON_LCD_EA8079) += ea8079/
 obj-$(CONFIG_EXYNOS_DECON_LCD_S6E3FC3) += s6e3fc3/
+
+# 4.19 vendor code built with gcc: big stack frames warn instead of failing under clang
+ccflags-y += -Wno-error=frame-larger-than

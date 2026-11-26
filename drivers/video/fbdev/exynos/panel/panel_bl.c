@@ -9,7 +9,6 @@
  */
 
 #include <linux/backlight.h>
-#include <linux/extremerom/brightness.h>
 #include "panel.h"
 #include "panel_bl.h"
 #include "copr.h"
@@ -534,13 +533,13 @@ int panel_bl_set_subdev(struct panel_bl_device *panel_bl, int id)
 
 int panel_bl_update_average(struct panel_bl_device *panel_bl, size_t index)
 {
-	struct timespec cur_ts;
+	struct timespec64 cur_ts;
 	int cur_brt;
 
 	if (index >= ARRAY_SIZE(panel_bl->tnv))
 		return -EINVAL;
 
-	ktime_get_ts(&cur_ts);
+	ktime_get_ts64(&cur_ts);
 	cur_brt = panel_bl->props.actual_brightness_intrp / CALC_SCALE;
 	timenval_update_snapshot(&panel_bl->tnv[index], cur_brt, cur_ts);
 
@@ -617,7 +616,7 @@ int aor_interpolation(unsigned int *brt_tbl, unsigned int *lum_tbl,
 					(s32)((u64)brightness - lower_brt) * disp_pow(10, 2),
 					(s32)(upper_brt - lower_brt) * disp_pow(10, 2)) + 5 * disp_pow(10, 2)) / disp_pow(10, 3);
 		aor = disp_div64(vtotal * aor_ratio + 5 * disp_pow(10, 3), disp_pow(10, 4));
-	} else if (dimtype == S_DIMMING) {
+	} else { /* S_DIMMING: dimtype has only these two values */
 		vbase_lum = VIRTUAL_BASE_LUMINANCE(upper_lum, upper_aor_ratio);
 		vbase_lum = disp_pow_round(vbase_lum, 2);
 		intrp_brt = interpolation(lower_lum * disp_pow(10, 4), upper_lum * disp_pow(10, 4),

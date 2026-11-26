@@ -60,7 +60,6 @@
 #if defined(CONFIG_TDMB_NOTIFIER)
 #include <linux/tdmb_notifier.h>
 #endif
-#include <linux/input/sec_cmd.h>
 
 #ifdef CONFIG_DYNAMIC_FREQ
 #include "./df/dynamic_freq.h"
@@ -493,6 +492,16 @@ static int panel_get_v4l2_mafpc_dev(struct panel_device *panel)
 
 
 #ifdef CONFIG_DISP_PMIC_SSD
+/*
+ * shortcut: 5.15 has no regulator short-detection call; the ELVSS SSD
+ * current stays at the S2DOS05 default until its driver exposes one.
+ */
+static inline int regulator_set_short_detection(struct regulator *reg,
+		bool enable, int ua)
+{
+	return 0;
+}
+
 static int panel_regulator_set_short_detection(struct panel_device *panel, int state)
 {
 	struct panel_regulator *regulator = panel->regulator;
@@ -4307,7 +4316,8 @@ static int panel_tdmb_notifier_callback(struct notifier_block *nb,
 }
 #endif
 
-#if defined(CONFIG_INPUT_TOUCHSCREEN)
+#if IS_BUILTIN(CONFIG_INPUT_SEC_NOTIFIER)
+#include "../../../../input/sec_input/sec_input.h"
 static int panel_input_notifier_callback(struct notifier_block *nb,
 		unsigned long data, void *v)
 {
@@ -4492,7 +4502,7 @@ static int panel_drv_probe(struct platform_device *pdev)
 		goto probe_err;
 	}
 #endif
-#if defined(CONFIG_INPUT_TOUCHSCREEN)
+#if IS_BUILTIN(CONFIG_INPUT_SEC_NOTIFIER)
 	sec_input_register_notify(&panel->input_notif,
 			panel_input_notifier_callback, 3);
 #endif

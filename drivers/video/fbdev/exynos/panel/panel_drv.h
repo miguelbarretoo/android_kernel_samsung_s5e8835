@@ -588,8 +588,8 @@ int panel_fast_discharge_set(struct panel_device *panel);
 
 #define PANEL_IOC_PANEL_DUMP			_IO(PANEL_IOC_BASE, 10)
 
-#define PANEL_IOC_EVT_FRAME_DONE		_IOW(PANEL_IOC_BASE, 11, struct timespec *)
-#define PANEL_IOC_EVT_VSYNC				_IOW(PANEL_IOC_BASE, 12, struct timespec *)
+#define PANEL_IOC_EVT_FRAME_DONE		_IOW(PANEL_IOC_BASE, 11, struct timespec64 *)
+#define PANEL_IOC_EVT_VSYNC				_IOW(PANEL_IOC_BASE, 12, struct timespec64 *)
 
 #ifdef CONFIG_SUPPORT_DOZE
 #define PANEL_IOC_DOZE					_IO(PANEL_IOC_BASE, 31)

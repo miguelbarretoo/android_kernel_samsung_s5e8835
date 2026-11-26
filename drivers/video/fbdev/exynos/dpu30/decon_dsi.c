@@ -26,7 +26,7 @@
 
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
 #include <soc/samsung/exynos-devfreq.h>
-#include <soc/samsung/exynos-debug.h>
+#include "../dpu30/exynos-debug-compat.h"
 
 #include "decon.h"
 #include "dsim.h"
@@ -127,7 +127,7 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 #if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
 		decon_info("[LATENCY] cycle=%d @ACLK=%lu KHz\n",
 			decon_reg_get_latency_monitor_value(decon->id),
-			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
+			dpu_devfreq_get_domain_freq(DEVFREQ_DISP));
 #endif
 #if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
 		if (decon->readback.request) {
@@ -585,6 +585,7 @@ static int decon_fsync_thread(void *data)
 {
 	struct decon_device *decon = data;
 	struct v4l2_event ev;
+	struct timespec64 ts;
 	ktime_t timestamp;
 	int num_dsi = (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) ? 2 : 1;
 	int i, ret;
@@ -595,7 +596,9 @@ static int decon_fsync_thread(void *data)
 				(timestamp != decon->fsync.timestamp) &&
 				decon->fsync.active);
 		if (!ret) {
-			ev.timestamp = ktime_to_timespec(decon->fsync.timestamp);
+			ts = ktime_to_timespec64(decon->fsync.timestamp);
+			ev.timestamp.tv_sec = ts.tv_sec;
+			ev.timestamp.tv_nsec = ts.tv_nsec;
 			ev.type = V4L2_EVENT_DECON_FRAME_DONE;
 			for (i = 0; i < num_dsi; i++) {
 				v4l2_subdev_call(decon->out_sd[i], core, ioctl,

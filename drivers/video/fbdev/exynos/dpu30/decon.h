@@ -19,7 +19,7 @@
 #include <linux/interrupt.h>
 #include <linux/wait.h>
 #include <linux/kthread.h>
-#include <linux/pm_qos.h>
+#include <soc/samsung/exynos_pm_qos.h>
 #include <linux/delay.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
@@ -36,7 +36,8 @@
 #endif
 #include <linux/exynos_iovmm.h>
 #include <linux/sync_file.h>
-#include <soc/samsung/exynos-debug.h>
+#include <linux/dma-buf.h>
+#include "../dpu30/exynos-debug-compat.h"
 
 /* TODO: SoC dependency will be removed */
 #include "./cal_9830/regs-decon.h"
@@ -55,6 +56,33 @@
 #ifdef CONFIG_SEC_ABC
 #include <linux/sti/abc_common.h>
 #endif
+
+#include <soc/samsung/exynos-devfreq.h>
+/*
+ * shortcut: ARM_EXYNOS_DEVFREQ is a module this build never loads, so the
+ * current DISP/INT frequency reads as 0 and BTS always requests its QoS
+ * floor. Drop this when devfreq is built in.
+ */
+static inline unsigned long dpu_devfreq_get_domain_freq(unsigned int type)
+{
+	return IS_BUILTIN(CONFIG_ARM_EXYNOS_DEVFREQ) ?
+		exynos_devfreq_get_domain_freq(type) : 0;
+}
+
+/* 4.19 dma_buf_vmap() returned the address; 5.15 fills a struct dma_buf_map */
+static inline void *decon_dma_buf_vmap(struct dma_buf *buf)
+{
+	struct dma_buf_map map;
+
+	return dma_buf_vmap(buf, &map) ? NULL : map.vaddr;
+}
+
+static inline void decon_dma_buf_vunmap(struct dma_buf *buf, void *vaddr)
+{
+	struct dma_buf_map map = DMA_BUF_MAP_INIT_VADDR(vaddr);
+
+	dma_buf_vunmap(buf, &map);
+}
 
 #define CONFIG_PROFILE_WINCONFIG	1
 
@@ -1285,9 +1313,9 @@ struct decon_bts {
 	struct bts_decon_info bts_info;
 #endif
 	struct decon_bts_ops *ops;
-	struct pm_qos_request mif_qos;
-	struct pm_qos_request int_qos;
-	struct pm_qos_request disp_qos;
+	struct exynos_pm_qos_request mif_qos;
+	struct exynos_pm_qos_request int_qos;
+	struct exynos_pm_qos_request disp_qos;
 	u32 scen_updated;
 };
 
@@ -1798,7 +1826,7 @@ static inline int decon_doze_wake_lock(struct decon_device *decon,
 		unsigned long timeout)
 {
 	s64 elapsed_usec;
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 	unsigned long timeout_jiffies;
 	bool wakeup = false;
 
@@ -1806,7 +1834,7 @@ static inline int decon_doze_wake_lock(struct decon_device *decon,
 		return -EINVAL;
 
 	timeout_jiffies = jiffies + msecs_to_jiffies(timeout);
-	ktime_get_ts(&last_ts);
+	ktime_get_ts64(&last_ts);
 	decon_dbg("%s (%s) cnt:%d +\n",
 		__func__, get_decon_state_name(decon->state),
 			atomic_read(&decon->doze_hiber.block_cnt));
@@ -1833,9 +1861,9 @@ static inline int decon_doze_wake_lock(struct decon_device *decon,
 			__func__, get_decon_state_name(decon->state),
 			atomic_read(&decon->doze_hiber.block_cnt));
 
-	ktime_get_ts(&cur_ts);
-	delta_ts = timespec_sub(cur_ts, last_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	ktime_get_ts64(&cur_ts);
+	delta_ts = timespec64_sub(cur_ts, last_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	if (elapsed_usec > 20000) {
 		decon_warn("%s (elapsed %2lld.%03lld msec)\n",
 				__func__, elapsed_usec / 1000, elapsed_usec % 1000);

@@ -59,9 +59,9 @@ static int profiler_do_seqtbl_by_index_nolock(struct profiler_device *p, int ind
 	struct seqinfo *tbl;
 	struct panel_info *panel_data;
 	struct panel_device *panel = container_of(p, struct panel_device, profiler);
-	struct timespec cur_ts = { 0, };
-	struct timespec last_ts = { 0, };
-	struct timespec delta_ts = { 0, };
+	struct timespec64 cur_ts = { 0, };
+	struct timespec64 last_ts = { 0, };
+	struct timespec64 delta_ts = { 0, };
 	s64 elapsed_usec = 0;
 
 	if (panel == NULL) {
@@ -74,10 +74,10 @@ static int profiler_do_seqtbl_by_index_nolock(struct profiler_device *p, int ind
 
 	panel_data = &panel->panel_data;
 	tbl = panel->profiler.seqtbl;
-	ktime_get_ts(&cur_ts);
+	ktime_get_ts64(&cur_ts);
 
 #if 0
-	ktime_get_ts(&last_ts);
+	ktime_get_ts64(&last_ts);
 #endif
 
 	if (unlikely(index < 0 || index >= MAX_PROFILER_SEQ)) {
@@ -88,8 +88,8 @@ static int profiler_do_seqtbl_by_index_nolock(struct profiler_device *p, int ind
 	}
 
 #if 0
-	delta_ts = timespec_sub(last_ts, cur_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	delta_ts = timespec64_sub(last_ts, cur_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	if (elapsed_usec > 34000)
 		panel_dbg("seq:%s warn:elapsed %lld.%03lld msec to acquire lock\n",
 				tbl[index].name, elapsed_usec / 1000, elapsed_usec % 1000);
@@ -103,9 +103,9 @@ static int profiler_do_seqtbl_by_index_nolock(struct profiler_device *p, int ind
 	}
 
 do_exit:
-	ktime_get_ts(&last_ts);
-	delta_ts = timespec_sub(last_ts, cur_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	ktime_get_ts64(&last_ts);
+	delta_ts = timespec64_sub(last_ts, cur_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	panel_dbg("seq:%s done (elapsed %2lld.%03lld msec)\n",
 			tbl[index].name, elapsed_usec / 1000, elapsed_usec % 1000);
 
@@ -351,9 +351,9 @@ static int insert_cmdlog(struct profiler_device *p, struct profiler_cmdlog_data 
 	int ret = 0;
 	struct profiler_config *conf = p->conf;
 	struct profiler_cmdlog_data *c = NULL;
-	struct timespec cur_ts = { 0, };
-	struct timespec last_ts = { 0, };
-	struct timespec delta_ts = { 0, };
+	struct timespec64 cur_ts = { 0, };
+	struct timespec64 last_ts = { 0, };
+	struct timespec64 delta_ts = { 0, };
 	s64 elapsed_nsec;
 	size_t i;
 
@@ -373,7 +373,7 @@ static int insert_cmdlog(struct profiler_device *p, struct profiler_cmdlog_data 
 	}
 
 	if (prof_en(p, timediff)) {
-		ktime_get_ts(&cur_ts);
+		ktime_get_ts64(&cur_ts);
 	}
 
 	c = &p->cmdlog_list[p->cmdlog_idx_head];
@@ -412,9 +412,9 @@ static int insert_cmdlog(struct profiler_device *p, struct profiler_cmdlog_data 
 	}
 
 	if (prof_en(p, timediff)) {
-		ktime_get_ts(&last_ts);
-		delta_ts = timespec_sub(last_ts, cur_ts);
-		elapsed_nsec = timespec_to_ns(&delta_ts);
+		ktime_get_ts64(&last_ts);
+		delta_ts = timespec64_sub(last_ts, cur_ts);
+		elapsed_nsec = timespec64_to_ns(&delta_ts);
 		prof_info(p, timediff_en, "cmdlog elapsed = %lldns, 0x%02x len %d\n", elapsed_nsec, c->cmd, c->size);
 	}
 
@@ -576,7 +576,7 @@ static int profiler_mprint_update(struct profiler_device *p)
 {
 	int ret = 0;
 	struct panel_device *panel = container_of(p, struct panel_device, profiler);
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 	s64 elapsed_usec = 0;
 
 	struct pktinfo PKTINFO(self_mprint_data) = {
@@ -608,7 +608,7 @@ static int profiler_mprint_update(struct profiler_device *p)
 	ret = profiler_do_seqtbl_by_index_nolock(p, MEM_SELECT_PROFILE_FPS_MASK_SEQ);
 
 	//send mask data
-	ktime_get_ts(&cur_ts);
+	ktime_get_ts64(&cur_ts);
 	ret = panel_do_seqtbl(panel, &self_mprint_data_seq);
 	if (unlikely(ret < 0)) {
 		panel_err("failed to excute self_mprint_data_cmdtbl(%d)\n",
@@ -618,9 +618,9 @@ static int profiler_mprint_update(struct profiler_device *p)
 	}
 
 	if (prof_en(p, timediff)) {
-		ktime_get_ts(&last_ts);
-		delta_ts = timespec_sub(last_ts, cur_ts);
-		elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+		ktime_get_ts64(&last_ts);
+		delta_ts = timespec64_sub(last_ts, cur_ts);
+		elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	}
 	prof_info(p, timediff_en, "write mask image, elapsed = %lldus\n", elapsed_usec);
 	prof_info(p, mprint_debug, "write mask image, size = %d\n", p->mask_props.data_size);
@@ -650,9 +650,9 @@ static int profiler_thread(void *data)
 	char text[PROFILER_TEXT_OUTPUT_LEN] = {0, };
 	int len = 0;
 	int cycle_time = 0;
-	struct timespec cur_ts = { 0, };
-	struct timespec last_ts = { 0, };
-	struct timespec delta_ts = { 0, };
+	struct timespec64 cur_ts = { 0, };
+	struct timespec64 last_ts = { 0, };
+	struct timespec64 delta_ts = { 0, };
 	s64 elapsed_usec = 0;
 
 	if (p->conf == NULL) {
@@ -693,20 +693,20 @@ static int profiler_thread(void *data)
 		
 		if (prof_en(p, mprint) && len > 0 && strncmp(text_old, text, len) != 0) {
 			if (prof_en(p, timediff))
-				ktime_get_ts(&cur_ts);
+				ktime_get_ts64(&cur_ts);
 			
 			ret = char_to_mask_img(mask_props, text);
 
 			if (prof_en(p, timediff))
-				ktime_get_ts(&last_ts);
+				ktime_get_ts64(&last_ts);
 
 			if (ret < 0) {
 				panel_err("err on mask img gen '%s'\n", text);
 				continue;
 			}
 			if (prof_en(p, timediff)) {
-				delta_ts = timespec_sub(last_ts, cur_ts);
-				elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+				delta_ts = timespec64_sub(last_ts, cur_ts);
+				elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 			}		
 			prof_info(p, mprint_debug, "generated img by '%s', size %d, cyc %d\n",
 				text, mask_props->data_size, cycle_time);

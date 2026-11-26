@@ -1,6 +1,6 @@
 config EXYNOS_DPU30
 	bool "Samsung Exynos Display Sub-system (DPP, DECON, MIPI, DISPLAYPORT)"
-	select EXYNOS_IOMMU
+	select EXYNOS990_IOMMU if SOC_EXYNOS9830
 	select MEDIA_CAMERA_SUPPORT
 	select PHY_EXYNOS_MIPI_DSIM
 	default n
@@ -146,15 +146,7 @@ config DSIM_CMD_TEST
         depends on EXYNOS_DPU30
         default n
 
-config EXYNOS_FREQ_HOP
-	bool "Support DPHY PLL Frequency Hopping"
-        depends on EXYNOS_DPU30
-        default n
-
-config EXYNOS_PLL_SLEEP
-	bool "Support DPHY PLL Sleep"
-        depends on EXYNOS_DPU30
-        default n
+# EXYNOS_FREQ_HOP and EXYNOS_PLL_SLEEP are defined by drivers/gpu/drm/samsung/dpu.
 
 config EXYNOS_EWR
 	bool "Support early wake up"

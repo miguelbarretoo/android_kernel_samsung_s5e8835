@@ -20,6 +20,10 @@
 #include <media/v4l2-subdev.h>
 #include <video/mipi_display.h>
 
+/* Samsung names for the DSI compression-mode and PPS packets (4.19 mipi_display.h) */
+#define MIPI_DSI_DSC_PRA	MIPI_DSI_COMPRESSION_MODE
+#define MIPI_DSI_DSC_PPS	MIPI_DSI_PICTURE_PARAMETER_SET
+
 #include "./panels/exynos_panel.h"
 #include "./cal_9830/regs-dsim.h"
 #include "./cal_9830/dsim_cal.h"

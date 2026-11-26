@@ -2185,7 +2185,8 @@ void dsim_reg_preinit(u32 id)
 	u32 lanes;
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 	struct dsim_clks clks;
-	struct exynos_panel_info lcd_info;
+	/* static: too big for the 5.15 2 KiB frame limit; only probe calls this */
+	static struct exynos_panel_info lcd_info;
 	u32 idx;
 
 	/* default configuration just for reading panel id */

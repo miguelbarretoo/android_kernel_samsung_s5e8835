@@ -399,7 +399,7 @@ static int mipi_write_table(u32 id, const struct cmd_set *cmd, int size, u32 opt
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 	int i, from = 0, sz_pl = 0;
 	s64 elapsed_usec;
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 
 	if (!cmd) {
 		panel_err("cmd is null\n");
@@ -417,7 +417,7 @@ static int mipi_write_table(u32 id, const struct cmd_set *cmd, int size, u32 opt
 		return -EINVAL;
 	}
 
-	ktime_get_ts(&last_ts);
+	ktime_get_ts64(&last_ts);
 	mutex_lock(&cmd_lock);
 	for (i = 0; i < size; i++) {
 		if (cmd[i].buf == NULL) {
@@ -474,9 +474,9 @@ static int mipi_write_table(u32 id, const struct cmd_set *cmd, int size, u32 opt
 		goto error;
 	}
 
-	ktime_get_ts(&cur_ts);
-	delta_ts = timespec_sub(cur_ts, last_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	ktime_get_ts64(&cur_ts);
+	delta_ts = timespec64_sub(cur_ts, last_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	panel_dbg("done (cmd_set:%d size:%d elapsed %2lld.%03lld msec)\n",
 			size, total_size,
 			elapsed_usec / 1000, elapsed_usec % 1000);
@@ -496,7 +496,7 @@ static int mipi_sr_write(u32 id, u8 cmd_id, const u8 *cmd, u32 offset, int size,
 	int ret = 0;
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 	s64 elapsed_usec;
-	struct timespec cur_ts, last_ts, delta_ts;
+	struct timespec64 cur_ts, last_ts, delta_ts;
 	int align = 0;
 
 	if (!cmd) {
@@ -514,15 +514,15 @@ static int mipi_sr_write(u32 id, u8 cmd_id, const u8 *cmd, u32 offset, int size,
 		panel_warn("sram packets need to align option, set force to 16\n");
 		align = 16;
 	}
-	ktime_get_ts(&last_ts);
+	ktime_get_ts64(&last_ts);
 
 	mutex_lock(&cmd_lock);
 	ret = dsim_sr_write_data(dsim, cmd, size, align);
 	mutex_unlock(&cmd_lock);
 
-	ktime_get_ts(&cur_ts);
-	delta_ts = timespec_sub(cur_ts, last_ts);
-	elapsed_usec = timespec_to_ns(&delta_ts) / 1000;
+	ktime_get_ts64(&cur_ts);
+	delta_ts = timespec64_sub(cur_ts, last_ts);
+	elapsed_usec = timespec64_to_ns(&delta_ts) / 1000;
 	panel_dbg("done (size:%d elapsed %2lld.%03lld msec)\n",
 			size, elapsed_usec / 1000, elapsed_usec % 1000);
 
