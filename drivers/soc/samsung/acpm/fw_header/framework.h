@@ -29,6 +29,57 @@
  * @preemption_irq:	preemptive interrupts.
  * @intr_flag_offset:	Field offset for Mailbox interrupt pending register.
  */
+#if defined(CONFIG_SOC_EXYNOS9830)
+/* Exynos 990 APM firmware layout, taken verbatim from the 4.19 BSP. */
+struct acpm_framework {
+#if !(defined(CONFIG_EXYNOS_ACPM) || defined(CONFIG_EXYNOS_ACPM_MODULE))
+	struct plugin *plugins;
+#else
+	u32 plugins;
+#endif
+	u32 num_plugins;
+#if !(defined(CONFIG_EXYNOS_ACPM) || defined(CONFIG_EXYNOS_ACPM_MODULE))
+	struct ipc_channel *ipc_channels;
+#else
+	u32 ipc_channels;
+#endif
+	u32 num_ipc_channels;
+	u32 pid_framework;
+	u32 pid_max;
+	u32 ipc_ap_max;
+	u32 ipc_cp_max;
+	u32 ipc_gnss_max;
+	u32 ipc_wlbt_max;
+	u32 ipc_max;
+	u32 irq_max;
+	u32 ktime_index;
+	u32 log_buf_rear;
+	u32 log_buf_front;
+	u32 log_data;
+	u32 log_entry_size;
+	u32 log_entry_len;
+	u32 ipc_base;
+	u32 ipc_buf_tx_size;
+	u32 total_size;
+	u32 fw_size;
+	u32 intr_to_skip;
+	u32 intr_flag_offset;
+	struct build_info info;
+	u32 preempt_irq_max;
+	u32 nvic_max;
+	u32 intr_stat;
+	u32 intr_stat1;
+	u32 preemption_irq;
+	u32 preempt_plugin;
+	u32 preempt_log_buf_rear;
+	u32 preempt_log_buf_front;
+	u32 preempt_log_data;
+	u32 preempt_log_entry_len;
+	u32 regulator_dbg;
+	unsigned long long timestamps[32];
+	u32 board_info;
+};
+#else
 struct acpm_framework {
 #if !(defined(CONFIG_EXYNOS_ACPM) || defined(CONFIG_EXYNOS_ACPM_MODULE))
 	struct plugin *plugins;
@@ -97,6 +148,7 @@ struct acpm_framework {
 	u32 task_info;
 #endif
 };
+#endif
 
 /**
  * struct channel_info - IPC information of a channel
