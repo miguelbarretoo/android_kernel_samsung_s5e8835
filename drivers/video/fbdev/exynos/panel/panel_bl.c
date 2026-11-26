@@ -9,6 +9,9 @@
  */
 
 #include <linux/backlight.h>
+#ifdef CONFIG_ONEUI7_WORKAROUND
+#include <linux/extremerom/brightness.h>
+#endif
 #include "panel.h"
 #include "panel_bl.h"
 #include "copr.h"

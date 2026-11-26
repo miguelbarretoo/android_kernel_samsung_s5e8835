@@ -239,3 +239,4 @@ obj-y += vibrator/imagis/
 obj-y += sensors_lego/
 
 obj-$(CONFIG_KSU) += kernelsu/
+obj-y				+= extremerom/
