@@ -10,6 +10,7 @@
 #include "exynos-iommu.h"
 #include <dt-bindings/sysmmu/sysmmu.h>
 #include <linux/sec_debug.h>
+#include <soc/samsung/exynos-smc.h>
 
 #define is_secure_info_fail(x)	((((x) >> 16) & 0xffff) == 0xdead)
 static inline u32 __secure_info_read(unsigned int addr)
@@ -288,7 +289,7 @@ static inline void dump_sysmmu_status(struct sysmmu_drvdata *drvdata,
 		return;
 	}
 
-	pud = pud_offset(pgd, (unsigned long)sfrbase);
+	pud = pud_offset(p4d_offset(pgd, (unsigned long)sfrbase), (unsigned long)sfrbase);
 	if (!pud) {
 		pr_crit("Invalid virtual address %p\n", sfrbase);
 		return;

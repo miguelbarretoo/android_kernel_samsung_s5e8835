@@ -24,7 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <linux/smc.h>
+#include <soc/samsung/exynos-smc.h>
 #include <linux/swap.h>
 #include <linux/swapops.h>
 
@@ -267,7 +267,7 @@ static int sysmmu_get_hw_info(struct sysmmu_drvdata *data)
 	return 0;
 }
 
-static int __init __sysmmu_secure_irq_init(struct device *sysmmu,
+static int __sysmmu_secure_irq_init(struct device *sysmmu,
 				     struct sysmmu_drvdata *drvdata)
 {
 	struct platform_device *pdev = to_platform_device(sysmmu);
@@ -301,7 +301,7 @@ static int __init __sysmmu_secure_irq_init(struct device *sysmmu,
 	return ret;
 }
 
-static int __init sysmmu_parse_tlb_way_dt(struct device *sysmmu,
+static int sysmmu_parse_tlb_way_dt(struct device *sysmmu,
 				struct sysmmu_drvdata *drvdata)
 {
 	const char *props_name = "sysmmu,tlb_property";
@@ -412,7 +412,7 @@ err_priv_id:
 	return ret;
 }
 
-static int __init sysmmu_parse_tlb_port_dt(struct device *sysmmu,
+static int sysmmu_parse_tlb_port_dt(struct device *sysmmu,
 				struct sysmmu_drvdata *drvdata)
 {
 	const char *props_name = "sysmmu,tlb_property";
@@ -491,7 +491,7 @@ err_slot_prop:
 	return ret;
 }
 
-static int __init sysmmu_parse_dt(struct device *sysmmu,
+static int sysmmu_parse_dt(struct device *sysmmu,
 				struct sysmmu_drvdata *drvdata)
 {
 	unsigned int qos = DEFAULT_QOS_VALUE;
@@ -537,7 +537,37 @@ static int __init sysmmu_parse_dt(struct device *sysmmu,
 }
 
 static struct iommu_ops exynos_iommu_ops;
-static int __init exynos_sysmmu_probe(struct platform_device *pdev)
+static int exynos_iommu_of_xlate(struct device *master,
+				 struct of_phandle_args *spec);
+
+/*
+ * 5.15 calls of_xlate only for IOMMUs that go through the IOMMU core. Do the
+ * 4.19 xlate ourselves for every master whose "iommus" names this System
+ * MMU; fw_devlink probes those masters only after this supplier.
+ */
+static void exynos_sysmmu_link_masters(struct device *sysmmu)
+{
+	struct of_phandle_args spec;
+	struct device_node *np;
+	int i;
+
+	for_each_node_with_property(np, "iommus") {
+		for (i = 0; !of_parse_phandle_with_args(np, "iommus",
+					"#iommu-cells", i, &spec); i++) {
+			struct platform_device *master = NULL;
+
+			if (spec.np == sysmmu->of_node)
+				master = of_find_device_by_node(np);
+			if (master) {
+				exynos_iommu_of_xlate(&master->dev, &spec);
+				put_device(&master->dev);
+			}
+			of_node_put(spec.np);
+		}
+	}
+}
+
+static int exynos_sysmmu_probe(struct platform_device *pdev)
 {
 	int irq, ret;
 	struct device *dev = &pdev->dev;
@@ -619,12 +649,16 @@ static int __init exynos_sysmmu_probe(struct platform_device *pdev)
 		sysmmu_drvdata_list->next = data;
 	}
 
-	iommu_device_set_ops(&data->iommu, &exynos_iommu_ops);
-	iommu_device_set_fwnode(&data->iommu, &dev->of_node->fwnode);
-
-	ret = iommu_device_register(&data->iommu);
+	/*
+	 * Registered so that of_iommu_configure() finds ops without of_xlate
+	 * and leaves the masters on direct DMA instead of deferring them: they
+	 * map through the IOVMM API, never through the IOMMU core.
+	 */
+	ret = iommu_device_register(&data->iommu, &exynos_iommu_ops, dev);
 	if (ret)
-		goto err_iommu_register;
+		return ret;
+
+	exynos_sysmmu_link_masters(dev);
 
 	pm_runtime_enable(dev);
 
@@ -637,10 +671,6 @@ static int __init exynos_sysmmu_probe(struct platform_device *pdev)
 			MMU_REV_VER(data->version));
 
 	return 0;
-
-err_iommu_register:
-	iommu_device_sysfs_remove(&data->iommu);
-	return ret;
 }
 
 static bool __sysmmu_disable(struct sysmmu_drvdata *drvdata)
@@ -848,7 +878,7 @@ static const struct of_device_id sysmmu_of_match[] = {
 	{ },
 };
 
-static struct platform_driver exynos_sysmmu_driver __refdata = {
+static struct platform_driver exynos_sysmmu_driver = {
 	.probe	= exynos_sysmmu_probe,
 	.driver	= {
 		.name		= "exynos-sysmmu",
@@ -1118,7 +1148,7 @@ static int lv2set_page(sysmmu_pte_t *pent, phys_addr_t paddr, size_t size,
 }
 static int exynos_iommu_map(struct iommu_domain *iommu_domain,
 			    unsigned long l_iova, phys_addr_t paddr, size_t size,
-			    int prot)
+			    int prot, gfp_t gfp)
 {
 	struct exynos_iommu_domain *domain = to_exynos_domain(iommu_domain);
 	sysmmu_pte_t *entry;
@@ -1153,7 +1183,8 @@ static int exynos_iommu_map(struct iommu_domain *iommu_domain,
 }
 
 static size_t exynos_iommu_unmap(struct iommu_domain *iommu_domain,
-				 unsigned long l_iova, size_t size)
+				 unsigned long l_iova, size_t size,
+				 struct iommu_iotlb_gather *gather)
 {
 	struct exynos_iommu_domain *domain = to_exynos_domain(iommu_domain);
 	sysmmu_iova_t iova = (sysmmu_iova_t)l_iova;
@@ -1320,8 +1351,6 @@ static int exynos_iommu_of_xlate(struct device *master,
 
 		master->archdata.iommu = owner;
 
-		/* HACK: Make relationship between group and master */
-		master->iommu_group = owner->vmm_data->group;
 
 		if (!sysmmu_owner_list) {
 			sysmmu_owner_list = owner;
@@ -1369,8 +1398,22 @@ static struct iommu_ops exynos_iommu_ops = {
 	.unmap = exynos_iommu_unmap,
 	.iova_to_phys = exynos_iommu_iova_to_phys,
 	.pgsize_bitmap = SECT_SIZE | LPAGE_SIZE | SPAGE_SIZE,
-	.of_xlate = exynos_iommu_of_xlate,
 };
+
+/* iommu_domain_alloc() needs bus iommu_ops, which this driver does not set. */
+struct iommu_domain *exynos_iommu_domain_alloc_unmanaged(void)
+{
+	struct iommu_domain *domain;
+
+	domain = exynos_iommu_domain_alloc(IOMMU_DOMAIN_UNMANAGED);
+	if (!domain)
+		return NULL;
+
+	domain->ops = &exynos_iommu_ops;
+	domain->type = IOMMU_DOMAIN_UNMANAGED;
+	domain->pgsize_bitmap = exynos_iommu_ops.pgsize_bitmap;
+	return domain;
+}
 
 void exynos_sysmmu_show_status(struct device *master)
 {
@@ -1514,11 +1557,15 @@ static int __init exynos_iommu_create_domain(void)
 		unsigned int start = IOVA_START, end = IOVA_END;
 		dma_addr_t d_addr;
 		size_t d_size;
+		u32 win[2];
 		int i = 0;
 		bool need_prealloc;
 
-		ret = of_get_dma_window(domain_np, NULL, 0, NULL, &d_addr, &d_size);
+		/* every Exynos 990 dma-window uses one address and one size cell */
+		ret = of_property_read_u32_array(domain_np, "dma-window", win, 2);
 		if (!ret) {
+			d_addr = win[0];
+			d_size = win[1];
 			if (d_addr == 0 || IOVA_OVFL(d_addr, d_size)) {
 				pr_err("Failed to get valid dma ranges,\n");
 				pr_err("Domain %s, range %pad++%#zx]\n",
@@ -1568,10 +1615,7 @@ static int __init exynos_iommu_create_domain(void)
 					return -ENOMEM;
 				}
 
-				/* HACK: Make one group for one domain */
 				domain = to_exynos_domain(vmm->domain);
-				vmm->group = iommu_group_alloc();
-				iommu_attach_group(vmm->domain, vmm->group);
 			}
 			/* Relationship between domain and client is added. */
 			ret = exynos_client_add(np, vmm);
@@ -1616,30 +1660,21 @@ static int __init exynos_iommu_init(void)
 	if (!exynos_sysmmu_debugfs_root)
 		pr_err("%s: Failed to create debugfs entry\n", __func__);
 
+	/* The domain clients must be known before a probe links its masters. */
+	ret = exynos_iommu_create_domain();
+	if (ret) {
+		pr_err("%s: Failed to create domain\n", __func__);
+		goto err_reg_driver;
+	}
+
 	ret = platform_driver_register(&exynos_sysmmu_driver);
 	if (ret) {
 		pr_err("%s: Failed to register driver\n", __func__);
 		goto err_reg_driver;
 	}
 
-	ret = bus_set_iommu(&platform_bus_type, &exynos_iommu_ops);
-	if (ret) {
-		pr_err("%s: Failed to register exynos-iommu driver.\n",
-								__func__);
-		goto err_set_iommu;
-	}
-	ret = exynos_iommu_create_domain();
-	if (ret) {
-		pr_err("%s: Failed to create domain\n", __func__);
-		goto err_create_domain;
-	}
-
 	return 0;
 
-err_create_domain:
-	bus_set_iommu(&platform_bus_type, NULL);
-err_set_iommu:
-	platform_driver_unregister(&exynos_sysmmu_driver);
 err_reg_driver:
 	kmem_cache_destroy(lv2table_kmem_cache);
 	return ret;
@@ -1707,7 +1742,7 @@ static int sysmmu_map_pte(struct mm_struct *mm,
 				spin_unlock(ptl);
 				/* find_vma() always successes */
 				ret = handle_mm_fault(find_vma(mm, addr),
-						addr, fault_flag);
+						addr, fault_flag, NULL);
 				spin_lock(ptl);
 				if (ret & VM_FAULT_ERROR) {
 					ret = mm_fault_translate(ret);
@@ -1790,7 +1825,7 @@ static inline int sysmmu_map_pud(struct mm_struct *mm,
 	pud_t *pud;
 	unsigned long next;
 
-	pud = pud_alloc(mm, pgd, addr);
+	pud = pud_alloc(mm, p4d_offset(pgd, addr), addr);
 	if (!pud)
 		return -ENOMEM;
 	do {

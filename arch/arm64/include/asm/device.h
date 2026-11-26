@@ -6,6 +6,9 @@
 #define __ASM_DEVICE_H
 
 struct dev_archdata {
+#ifdef CONFIG_EXYNOS990_IOMMU
+	void *iommu; /* struct exynos_iommu_owner of the 4.19 Exynos 990 System MMU */
+#endif
 };
 
 struct pdev_archdata {

@@ -528,6 +528,7 @@ static inline struct exynos_iovmm *exynos_get_iovmm(struct device *dev)
 struct exynos_vm_region *find_iovm_region(struct exynos_iovmm *vmm,
 						dma_addr_t iova);
 
+struct iommu_domain *exynos_iommu_domain_alloc_unmanaged(void);
 struct exynos_iovmm *exynos_create_single_iovmm(const char *name,
 					unsigned int start, unsigned int end);
 #else

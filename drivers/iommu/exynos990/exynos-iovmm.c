@@ -244,7 +244,7 @@ int iovmm_activate(struct device *dev)
 		return -EINVAL;
 	}
 
-	return iommu_attach_device(vmm->domain, dev);
+	return vmm->domain->ops->attach_dev(vmm->domain, dev);
 }
 
 void iovmm_deactivate(struct device *dev)
@@ -256,7 +256,7 @@ void iovmm_deactivate(struct device *dev)
 		return;
 	}
 
-	iommu_detach_device(vmm->domain, dev);
+	vmm->domain->ops->detach_dev(vmm->domain, dev);
 }
 
 struct iommu_domain *get_domain_from_dev(struct device *dev)
@@ -781,7 +781,7 @@ struct exynos_iovmm *exynos_create_single_iovmm(const char *name,
 		goto err_setup_domain;
 	}
 
-	vmm->domain = iommu_domain_alloc(&platform_bus_type);
+	vmm->domain = exynos_iommu_domain_alloc_unmanaged();
 	if (!vmm->domain) {
 		ret = -ENOMEM;
 		goto err_setup_domain;

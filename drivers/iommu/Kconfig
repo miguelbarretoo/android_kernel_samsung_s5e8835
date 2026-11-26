@@ -525,5 +525,6 @@ config PCIE_IOMMU_MAP_ONCE
 	  Enable map/unmap optimization feature
 
 source "drivers/iommu/samsung/Kconfig"
+source "drivers/iommu/exynos990/Kconfig"
 
 endif # IOMMU_SUPPORT

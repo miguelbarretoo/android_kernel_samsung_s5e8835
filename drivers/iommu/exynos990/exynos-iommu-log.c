@@ -70,12 +70,12 @@ static const char * const sysmmu_event_name[] = {
 static void exynos_iommu_debug_log_show(struct seq_file *s,
 					struct sysmmu_event_log *log)
 {
-	struct timeval tv = ktime_to_timeval(log->timestamp);
+	struct timespec64 tv = ktime_to_timespec64(log->timestamp);
 
 	if (log->event == EVENT_SYSMMU_NONE)
 		return;
 
-	seq_printf(s, "%06ld.%06ld: %15s", tv.tv_sec, tv.tv_usec,
+	seq_printf(s, "%06ld.%06ld: %15s", (long)tv.tv_sec, tv.tv_nsec / NSEC_PER_USEC,
 			sysmmu_event_name[log->event]);
 
 	switch (log->event) {

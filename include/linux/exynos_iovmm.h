@@ -173,7 +173,7 @@ static inline dma_addr_t exynos_iovmm_map_userptr(struct device *dev,
 
 #endif /* CONFIG_EXYNOS_IOVMM */
 
-#if defined(CONFIG_EXYNOS_IOMMU)
+#if defined(CONFIG_EXYNOS990_IOMMU)
 /**
  * exynos_sysmmu_map_user_pages() - maps all pages by fetching from
  * user page table entries.

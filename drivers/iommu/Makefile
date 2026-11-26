@@ -34,3 +34,4 @@ obj-$(CONFIG_APPLE_DART) += apple-dart.o
 obj-$(CONFIG_EXYNOS_CPIF_IOMMU) += exynos-cpif-iommu.o
 obj-$(CONFIG_EXYNOS_CPIF_IOMMU_V9) += exynos-cpif-iommu_v9.o
 obj-$(CONFIG_EXYNOS_PCIE_IOMMU) += exynos-pcie-iommu.o
+obj-$(CONFIG_EXYNOS990_IOMMU) += exynos990/

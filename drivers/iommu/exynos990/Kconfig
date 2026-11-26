@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config EXYNOS990_IOMMU
+	bool "Exynos 990 System MMU (4.19 driver)"
+	depends on SOC_EXYNOS9830 && ARM64
+	select IOMMU_API
+	help
+	  System MMU v7 driver of the Exynos 990 4.19 BSP. Its multimedia
+	  masters (DPU, G2D, MSCL, ...) map buffers through the IOVMM API
+	  below rather than through the DMA API.
+
+config EXYNOS_IOVMM
+	bool "IO Virtual Memory Manager for the Exynos 990 System MMU"
+	depends on EXYNOS990_IOMMU
+	default y
