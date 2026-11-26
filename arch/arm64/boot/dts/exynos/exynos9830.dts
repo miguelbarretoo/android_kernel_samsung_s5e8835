@@ -2052,6 +2052,9 @@
 		power-domains = <&pd_hsi0>;
 		status = "disabled";
 		samsung,sysreg-hsi0 = <&sysreg_hsi0>;
+		/* the 5.15 dwc3-exynos glue looks the PHYs up on this node */
+		phys = <&usbdrd_phy0 0>, <&usbdrd_phy0 1>;
+		phy-names = "usb2-phy", "usb3-phy";
 
 		usbdrd_dwc3: dwc3 {
 			compatible = "synopsys,dwc3";
