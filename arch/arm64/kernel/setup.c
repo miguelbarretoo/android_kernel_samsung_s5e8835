@@ -33,6 +33,9 @@
 #include <linux/psci.h>
 #include <linux/sched/task.h>
 #include <linux/mm.h>
+#include <linux/moduleparam.h>
+#include <linux/sched/debug.h>
+#include <linux/workqueue.h>
 
 #include <asm/acpi.h>
 #include <asm/fixmap.h>
@@ -401,6 +404,41 @@ void exynos990_boot_trace_stop(void)
 {
 	WRITE_ONCE(exynos990_trace_map, NULL);
 }
+#endif
+
+#ifdef CONFIG_MODEL_X1SLTE
+/*
+ * Boot diagnosis: x1slte has no display or USB yet, so a stalled boot leaves
+ * no trace. Panic after x1slte_boot_panic=<secs> so last_kmsg keeps the log.
+ */
+static unsigned int x1slte_boot_panic_secs;
+core_param(x1slte_boot_panic, x1slte_boot_panic_secs, uint, 0644);
+
+static void x1slte_boot_panic_fn(struct work_struct *work)
+{
+	struct task_struct *init;
+
+	if (!x1slte_boot_panic_secs)
+		return;
+
+	show_state_filter(TASK_UNINTERRUPTIBLE);
+	rcu_read_lock();
+	init = find_task_by_vpid(1);
+	if (init)
+		sched_show_task(init);
+	rcu_read_unlock();
+	panic("x1slte: boot diagnosis timeout after %us", x1slte_boot_panic_secs);
+}
+static DECLARE_DELAYED_WORK(x1slte_boot_panic_work, x1slte_boot_panic_fn);
+
+static int __init x1slte_boot_panic_init(void)
+{
+	if (x1slte_boot_panic_secs)
+		schedule_delayed_work(&x1slte_boot_panic_work,
+				      x1slte_boot_panic_secs * HZ);
+	return 0;
+}
+late_initcall(x1slte_boot_panic_init);
 #endif
 
 static void __init exynos990_boot_mark_setup_arch(void)
