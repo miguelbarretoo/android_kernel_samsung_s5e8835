@@ -667,6 +667,11 @@ static int dwc3_otg_start_gadget(struct otg_fsm *fsm, int on)
 
 		pr_info("core RPM Usage Count: %d\n", dev->power.usage_count);
 		pr_info("core RPM runtime_status: %d\n", dev->power.runtime_status);
+		/* 4.19 (dwc3_otg_phy_enable) powered and connected the PHY on every start */
+		if (IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+			exynos_usbdrd_ldo_manual_control(1);
+			exynos_usbdrd_phy_conn(dwc->usb2_generic_phy, 1);
+		}
 		ret = pm_runtime_get_sync(exynos_dev);
 		if (ret < 0) {
 			dev_err(dwc->dev, "%s: failed to initialize exynos: %d\n",
@@ -738,6 +743,10 @@ static int dwc3_otg_start_gadget(struct otg_fsm *fsm, int on)
 		pr_info("core RPM runtime_status: %d\n", dev->power.runtime_status);
 		pm_runtime_put_sync_suspend(exynos_dev);
 		pr_info("exynos RPM Usage Count: %d\n", exynos->dev->power.usage_count);
+		if (IS_ENABLED(CONFIG_SOC_EXYNOS9830)) {
+			exynos_usbdrd_phy_conn(dwc->usb2_generic_phy, 0);
+			exynos_usbdrd_ldo_manual_control(0);
+		}
 		if (dotg->pm_qos_hsi0_val) {
 			dev_info(dev, "pm_qos reset\n");
 			exynos_pm_qos_update_request(&dotg->pm_qos_hsi0_req, 0);
