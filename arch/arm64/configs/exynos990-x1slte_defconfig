@@ -1211,6 +1211,8 @@ CONFIG_PANEL_BACKLIGHT_PAC_3_0=y
 CONFIG_PANEL_NOTIFY=y
 CONFIG_PANEL_DISPLAY_MODE=y
 CONFIG_PANEL_VRR_BRIDGE=y
+# panel multi-resolution tables (.mres); without them the 1080x2400 switch fails
+CONFIG_SUPPORT_DSU=y
 # One UI 7+ system sends brightness / 100 (4.19 ExtremeROM fixup)
 CONFIG_ONEUI7_WORKAROUND=y
 # panel supplies come from the S2DOS05 display PMIC on hsi2c_4
