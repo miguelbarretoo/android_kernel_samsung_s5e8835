@@ -1216,3 +1216,7 @@ CONFIG_ONEUI7_WORKAROUND=y
 # panel supplies come from the S2DOS05 display PMIC on hsi2c_4
 CONFIG_I2C_EXYNOS5=y
 CONFIG_REGULATOR_S2DOS05=y
+# 4.19-era vendor HALs keep heap pointers in signed int64 (e.g. HWC2 layer
+# handles in the composer3 bridge): no TBI-tagged heap pointers, as on 4.19.
+# Exynos 990 has no MTE, which depends on this.
+# CONFIG_ARM64_TAGGED_ADDR_ABI is not set
