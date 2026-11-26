@@ -106,7 +106,16 @@ int tzdev_smc(struct tzdev_smc_data *data);
 #define tzdev_smc_tvm_shmem_rls(handle)			tzdev_smc_cmd(TZDEV_SMC_TVM_SHMEM_RLS, (handle), 0, 0, 0, 0, 0)
 #define tzdev_smc_sysconf()					tzdev_smc_cmd(TZDEV_SMC_SYSCONF, 0, 0, 0, 0, 0, 0)
 #define tzdev_smc_tz_panic_dump_init()				tzdev_smc_cmd(TZDEV_SMC_TZ_PANIC_DUMP_INIT, 0, 0, 0, 0, 0, 0)
-#define tzdev_smc_check_version()				tzdev_smc_cmd(TZDEV_SMC_CHECK_VERSION, LINUX_VERSION_CODE, TZDEV_DRIVER_CODE, 0, 0, 0, 0)
+/*
+ * The Exynos 990 TEEGRIS v4 secure kernel only accepts the 4.19 Linux
+ * version it shipped with (sublevel clamped to 255) and rejects 5.15.
+ */
+#if IS_ENABLED(CONFIG_SOC_EXYNOS9830)
+#define TZDEV_SWD_LINUX_VERSION_CODE	KERNEL_VERSION(4, 19, 255)
+#else
+#define TZDEV_SWD_LINUX_VERSION_CODE	LINUX_VERSION_CODE
+#endif
+#define tzdev_smc_check_version()				tzdev_smc_cmd(TZDEV_SMC_CHECK_VERSION, TZDEV_SWD_LINUX_VERSION_CODE, TZDEV_DRIVER_CODE, 0, 0, 0, 0)
 #define tzdev_smc_scma_cmd(cmd)					tzdev_smc_cmd(TZDEV_SMC_SCMA_CMD, cmd, 0, 0, 0, 0, 0)
 #define tzdev_smc_boot_log_read(pfn, nr_pages)			tzdev_smc_cmd(TZDEV_SMC_BOOT_LOG_READ, (pfn), (nr_pages), 0, 0, 0, 0)
 #define tzdev_smc_profiler_control(cmd, arg)			tzdev_smc_cmd(TZDEV_SMC_PROFILER_CONTROL, (cmd), (arg), 0, 0, 0, 0)
