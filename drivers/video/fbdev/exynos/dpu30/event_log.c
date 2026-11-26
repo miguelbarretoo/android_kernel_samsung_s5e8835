@@ -1863,8 +1863,15 @@ err_event_log:
 
 void decon_destroy_debugfs(struct decon_device *decon)
 {
-	if (decon->d.debug_root)
+	/*
+	 * 5.15 debugfs_remove() is recursive: the root takes every eventN with
+	 * it, and decon1/2 only borrow decon0's root, so they remove their own
+	 * file alone.
+	 */
+	if (decon->id == 0)
 		debugfs_remove(decon->d.debug_root);
-	if (decon->d.debug_event)
+	else
 		debugfs_remove(decon->d.debug_event);
+	decon->d.debug_root = NULL;
+	decon->d.debug_event = NULL;
 }
