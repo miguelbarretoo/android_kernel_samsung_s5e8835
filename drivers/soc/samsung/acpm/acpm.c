@@ -385,7 +385,14 @@ void acpm_enter_wfi(void)
 
 u32 exynos_get_peri_timer_icvra(void)
 {
-       return (EXYNOS_PERI_TIMER_MAX - __raw_readl(exynos_acpm->timer_base + EXYNOS_TIMER_APM_TCVR)) & EXYNOS_PERI_TIMER_MAX;
+	struct acpm_info *acpm = smp_load_acquire(&exynos_acpm);
+
+	if (!acpm || IS_ERR(acpm->timer_base))
+		return U32_MAX;
+
+	return (EXYNOS_PERI_TIMER_MAX -
+		__raw_readl(acpm->timer_base + EXYNOS_TIMER_APM_TCVR)) &
+		EXYNOS_PERI_TIMER_MAX;
 }
 
 void exynos_acpm_timer_clear(void)
@@ -505,13 +512,12 @@ static int acpm_probe(struct platform_device *pdev)
 		if (of_property_read_u32(node, "peritimer-cnt", &acpm->timer_cnt))
 		pr_warn("No matching property: peritiemr_cnt\n");
 
+	if (!IS_ERR(acpm->timer_base))
+		writel(acpm->timer_cnt, acpm->timer_base + EXYNOS_TIMER_APM_TCVR);
+
+	smp_store_release(&exynos_acpm, acpm);
 	exynos_reboot_register_acpm_ops(exynos_acpm_reboot);
-
-	exynos_acpm = acpm;
-
 	acpm_debugfs_init(acpm);
-
-	exynos_acpm_timer_clear();
 
 	fvmap_base_init();
 

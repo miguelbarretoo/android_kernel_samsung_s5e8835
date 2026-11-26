@@ -148,9 +148,13 @@ void timestamp_write(void)
 
 	spin_lock_irqsave(&acpm_debug->lock, flags);
 
-	tmp_index = __raw_readl(acpm_debug->time_index);
-
 	sys_tick = exynos_get_peri_timer_icvra();
+	if (sys_tick == U32_MAX) {
+		spin_unlock_irqrestore(&acpm_debug->lock, flags);
+		return;
+	}
+
+	tmp_index = __raw_readl(acpm_debug->time_index);
 	last_acpm_peri_timer = sys_tick;
 	sys_tick = acpm_debug->timestamps[tmp_index] + sys_tick * acpm_period;
 	cur_clk = sched_clock();
@@ -273,7 +277,9 @@ EXPORT_SYMBOL_GPL(acpm_time_calc);
 
 u32 acpm_get_peri_timer(void)
 {
-	return exynos_get_peri_timer_icvra();
+	u32 tick = exynos_get_peri_timer_icvra();
+
+	return tick == U32_MAX ? 0 : tick;
 }
 EXPORT_SYMBOL_GPL(acpm_get_peri_timer);
 
@@ -1153,6 +1159,7 @@ int acpm_ipc_probe(struct platform_device *pdev)
 		acpm_ipc = ipc;
 
 		log_buffer_init(&pdev->dev, node);
+		acpm_debug->ipc_info = ipc;
 
 		update_log_wq = alloc_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM |
 				WQ_UNBOUND | WQ_SYSFS, 1, "acpm_update_log");
@@ -1167,7 +1174,6 @@ int acpm_ipc_probe(struct platform_device *pdev)
 
 		register_die_notifier(&nb_die_block);
 		atomic_notifier_chain_register(&panic_notifier_list, &nb_panic_block);
-		acpm_debug->ipc_info = ipc;
 		acpm_set_sram_addr(ipc->sram_base);
 
 #if !defined(CONFIG_SOC_EXYNOS9830)
