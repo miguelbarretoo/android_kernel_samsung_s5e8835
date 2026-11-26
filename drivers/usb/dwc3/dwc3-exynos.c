@@ -1378,6 +1378,14 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 #endif
 	INIT_WORK(&exynos->int_kprobe_work, dwc3_init_kprobe_work);
 	schedule_work(&exynos->int_kprobe_work);
+
+	/*
+	 * shortcut: x1slte has no MAX77705 CCIC/MUIC driver yet, so nothing
+	 * reports VBUS; assume a cable at boot to bring up the adb gadget.
+	 * Drop this once CCIC_MAX77705 is ported.
+	 */
+	if (IS_ENABLED(CONFIG_MODEL_X1SLTE) && !IS_ENABLED(CONFIG_CCIC_MAX77705))
+		dwc3_exynos_vbus_event(dev, true);
 	return 0;
 
 populate_err:

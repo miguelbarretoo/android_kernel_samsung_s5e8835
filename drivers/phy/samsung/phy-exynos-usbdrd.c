@@ -1871,9 +1871,9 @@ static void exynos_usbdrd_utmi_set(struct exynos_usbdrd_phy *phy_drd,
 
 #ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
 extern void get_exynos_abox_device(void);
+#endif
 extern int exynos_usbdrd_phy_set_common(struct exynos_usbdrd_phy *phy_drd,
 					enum phy_mode mode, int submode);
-#endif
 
 int exynos_usbdrd_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 {
