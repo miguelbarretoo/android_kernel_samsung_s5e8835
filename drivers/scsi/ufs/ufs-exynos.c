@@ -554,10 +554,14 @@ static void exynos_ufs_set_features(struct ufs_hba *hba)
 			UFSHCI_QUIRK_SKIP_MANUAL_WB_FLUSH_CTRL |
 			UFSHCD_QUIRK_SKIP_DEF_UNIPRO_TIMEOUT_SETTING;
 
-	/* Exynos 990 HCI takes UTRD offsets/PRDT length in bytes, as on 4.19 */
+	/*
+	 * Exynos 990 HCI takes UTRD offsets/PRDT length in bytes and flags
+	 * responses carrying sense data (e.g. UNIT ATTENTION) as OCS 7, as on 4.19.
+	 */
 	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830))
 		hba->quirks |= UFSHCD_QUIRK_PRDT_BYTE_GRAN |
-			       UFSHCI_QUIRK_BROKEN_REQ_LIST_CLR;
+			       UFSHCI_QUIRK_BROKEN_REQ_LIST_CLR |
+			       UFSHCD_QUIRK_BROKEN_OCS_FATAL_ERROR;
 }
 
 /*
