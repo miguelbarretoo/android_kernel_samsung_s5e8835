@@ -244,6 +244,16 @@ config USB_CONFIGFS
 	  appropriate symbolic links.
 	  For more information see Documentation/usb/gadget_configfs.rst.
 
+config USB_OLD_CONFIGFS
+	bool "Samsung old style configfs (android0 functions/enable)"
+	depends on USB_CONFIGFS_UEVENT
+	help
+	  Samsung 4.x vendor init links every function into the config and
+	  then selects the active ones through
+	  /sys/class/android_usb/android0/functions and .../enable. Linked
+	  functions are parked until selected; plain configfs layouts
+	  (config not named "Conf 1") keep the upstream behaviour.
+
 config USB_CONFIGFS_UEVENT
 	bool "Uevent notification of Gadget state"
 	depends on USB_CONFIGFS
