@@ -36,6 +36,7 @@
 #include <linux/moduleparam.h>
 #include <linux/sched/debug.h>
 #include <linux/workqueue.h>
+#include <linux/reboot.h>
 
 #include <asm/acpi.h>
 #include <asm/fixmap.h>
@@ -431,11 +432,26 @@ static void x1slte_boot_panic_fn(struct work_struct *work)
 }
 static DECLARE_DELAYED_WORK(x1slte_boot_panic_work, x1slte_boot_panic_fn);
 
+/* A clean reboot loses the tail of last_kmsg, so turn it into a panic too. */
+static int x1slte_boot_reboot_fn(struct notifier_block *nb, unsigned long code,
+				 void *cmd)
+{
+	panic("x1slte: reboot requested during boot diagnosis: %s",
+	      cmd ? (char *)cmd : "(none)");
+	return NOTIFY_DONE;
+}
+static struct notifier_block x1slte_boot_reboot_nb = {
+	.notifier_call = x1slte_boot_reboot_fn,
+	.priority = INT_MAX,
+};
+
 static int __init x1slte_boot_panic_init(void)
 {
-	if (x1slte_boot_panic_secs)
+	if (x1slte_boot_panic_secs) {
 		schedule_delayed_work(&x1slte_boot_panic_work,
 				      x1slte_boot_panic_secs * HZ);
+		register_reboot_notifier(&x1slte_boot_reboot_nb);
+	}
 	return 0;
 }
 late_initcall(x1slte_boot_panic_init);
