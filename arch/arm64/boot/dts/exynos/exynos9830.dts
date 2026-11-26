@@ -2039,6 +2039,16 @@
 		reboot-cmd-offset = <0x0810>;	/* SYSIP_DAT0: boot mode for LK */
 	};
 
+	/* Samsung reset reason the LK reads (recovery, download, ...): 4.19 INFORM2/3 */
+	sec-reboot {
+		compatible = "samsung,sec-reboot";
+		samsung,syscon-phandle = <&pmu_system_controller>;
+		magic-inform = <0x0808>;	/* INFORM2 */
+		panic-inform = <0x080c>;	/* INFORM3 */
+		shutdown-offset = <0x030c>;	/* PS_HOLD_CONTROL */
+		shutdown-trigger = <0x100>;	/* PS_HOLD_EN */
+	};
+
 	chipid@10000000 {
 		compatible = "samsung,exynos9830-chipid";
 		reg = <0x0 0x10000000 0x100>;
