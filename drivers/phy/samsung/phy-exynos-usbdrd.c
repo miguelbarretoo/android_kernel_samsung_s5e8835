@@ -27,6 +27,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/phy/exynos-usb.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
@@ -1880,6 +1881,16 @@ int exynos_usbdrd_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
 	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
 	int ret = 0;
+
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830) &&
+	    inst->phy_cfg->id == EXYNOS_DRDPHY_UTMI &&
+	    phy_drd->usbphy_info.not_used_vbus_pad && mode == PHY_MODE_USB_DEVICE) {
+		if (submode == EXYNOS_USB_PULLUP_ON)
+			phy_exynos_usb_v3p1_enable_dp_pullup(&phy_drd->usbphy_info);
+		else if (submode == EXYNOS_USB_PULLUP_OFF)
+			phy_exynos_usb_v3p1_disable_dp_pullup(&phy_drd->usbphy_info);
+		return 0;
+	}
 
 	if (mode < PHY_MODE_BUS_SUSPEND)
 		inst->phy_cfg->phy_set(phy_drd, mode, NULL);

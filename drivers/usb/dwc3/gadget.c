@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
+#include <linux/phy/exynos-usb.h>
 #include <linux/pm_runtime.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -2728,7 +2729,10 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 		return 0;
 	}
 
-	if (is_on)
+	if (IS_ENABLED(CONFIG_SOC_EXYNOS9830))
+		phy_set_mode_ext(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE,
+				 is_on ? EXYNOS_USB_PULLUP_ON : EXYNOS_USB_PULLUP_OFF);
+	else if (is_on)
 		phy_set_mode(dwc->usb2_generic_phy, 1); //dp pull-up enable
 	else
 		phy_set_mode(dwc->usb2_generic_phy, 0); //dp pull-up disable
