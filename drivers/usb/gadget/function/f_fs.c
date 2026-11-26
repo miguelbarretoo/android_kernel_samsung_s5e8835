@@ -3660,7 +3660,11 @@ static struct usb_function *ffs_alloc(struct usb_function_instance *fi)
 	if (!func)
 		return ERR_PTR(-ENOMEM);
 
+#ifdef CONFIG_USB_OLD_CONFIGFS
+	func->function.name    = to_f_fs_opts(fi)->dev->name;
+#else
 	func->function.name    = "Function FS Gadget";
+#endif
 
 	func->function.bind    = ffs_func_bind;
 	func->function.unbind  = ffs_func_unbind;
