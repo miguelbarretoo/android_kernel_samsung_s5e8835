@@ -1868,10 +1868,18 @@ void decon_destroy_debugfs(struct decon_device *decon)
 	 * it, and decon1/2 only borrow decon0's root, so they remove their own
 	 * file alone.
 	 */
-	if (decon->id == 0)
+	if (decon->id == 0) {
 		debugfs_remove(decon->d.debug_root);
-	else
+	} else {
 		debugfs_remove(decon->d.debug_event);
+		debugfs_remove(decon->d.debug_dump);
+	}
 	decon->d.debug_root = NULL;
 	decon->d.debug_event = NULL;
+	decon->d.debug_dump = NULL;
+
+	kfree(decon->d.event_log);
+	kfree(decon->d.f_evt_log);
+	decon->d.event_log = NULL;
+	decon->d.f_evt_log = NULL;
 }

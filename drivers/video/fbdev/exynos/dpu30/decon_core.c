@@ -5762,7 +5762,6 @@ err_fsync:
 err_vsync:
 	iounmap(decon->res.ss_regs);
 err_res:
-	kfree(decon);
 err:
 	decon_err("decon probe fail");
 	return ret;
