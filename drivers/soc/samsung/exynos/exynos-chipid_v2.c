@@ -166,6 +166,11 @@ static const struct of_device_id of_exynos_chipid_ids[] = {
 		.compatible     = "samsung,s5e8835-chipid",
 		.data           = &drv_data_s5e8835,
 	},
+	{
+		/* same CHIPID layout as s5e8835 (4.19 drv_data_exynos9830) */
+		.compatible     = "samsung,exynos9830-chipid",
+		.data           = &drv_data_s5e8835,
+	},
 
 	{},
 };
