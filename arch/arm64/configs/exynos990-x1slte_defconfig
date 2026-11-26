@@ -1220,3 +1220,5 @@ CONFIG_REGULATOR_S2DOS05=y
 # handles in the composer3 bridge): no TBI-tagged heap pointers, as on 4.19.
 # Exynos 990 has no MTE, which depends on this.
 # CONFIG_ARM64_TAGGED_ADDR_ABI is not set
+# /dev/ssp: the TEE keymaster opens it, keystore2 never gets HMAC parameters without it
+CONFIG_EXYNOS990_SSP=y

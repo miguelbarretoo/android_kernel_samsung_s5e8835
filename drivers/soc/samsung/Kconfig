@@ -117,6 +117,13 @@ config EXYNOS_REGULATOR_COUPLER
 	bool "Exynos SoC Regulator Coupler" if COMPILE_TEST
 	depends on ARCH_EXYNOS || COMPILE_TEST
 endif
+config EXYNOS990_SSP
+	bool "Exynos 990 Samsung Secure Platform (CMSSP, 4.19 driver)"
+	depends on SOC_EXYNOS9830
+	help
+	  /dev/ssp for the Exynos 990 TEE keymaster and strongbox, which boot
+	  the secure processor through it.
+
 config CAL_IF
 	tristate "Exynos Chip Abstraction Layer Interface"
 	help

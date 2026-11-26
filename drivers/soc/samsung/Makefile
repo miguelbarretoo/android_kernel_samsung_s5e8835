@@ -91,3 +91,4 @@ obj-$(CONFIG_EXYNOS_PERF)       += xperf/
 
 # Profiler Multi IP Governor
 obj-$(CONFIG_EXYNOS_PROFILER)         += profiler/
+obj-$(CONFIG_EXYNOS990_SSP)	+= exynos990-ssp.o

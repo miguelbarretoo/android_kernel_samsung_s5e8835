@@ -19,8 +19,8 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_wakeup.h>
-#include <linux/pm_qos.h>
-#include <linux/smc.h>
+#include <soc/samsung/exynos_pm_qos.h>
+#include <soc/samsung/exynos-cpupm.h>
 #include <linux/miscdevice.h>
 #include <linux/ioctl.h>
 #include <linux/uaccess.h>
@@ -29,8 +29,7 @@
 #include <linux/timer.h>
 #include <linux/mm.h>
 #include <soc/samsung/exynos-pd.h>
-#include <soc/samsung/exynos-itmon.h>
-#include <linux/soc/samsung/exynos-soc.h>
+#include <soc/samsung/exynos/exynos-soc.h>
 
 #define SSP_RET_OK		0
 #define SSP_RET_FAIL		-1
@@ -57,14 +56,13 @@
 #define PMU_SSP_STATUS_VA_OFFSET	(0xd84)
 #define PMU_SSP_STATUS_MASK		(1 << 0)
 
-void __iomem *pmu_va_base;
+static void __iomem *pmu_va_base;
 
-spinlock_t ssp_lock;
-struct mutex ssp_ioctl_lock;
+static spinlock_t ssp_lock;
+static struct mutex ssp_ioctl_lock;
 static int ssp_power_count;
 static int ssp_idle_ip_index;
-static struct pm_qos_request ssp_pm_int_request;
-extern struct exynos_chipid_info exynos_soc_info;
+static struct exynos_pm_qos_request ssp_pm_int_request;
 
 struct ssp_device {
 	struct device *dev;
@@ -84,7 +82,7 @@ struct ssp_user {
 	struct ssp_user *next;
 };
 
-struct ssp_user *head = NULL;
+static struct ssp_user *head;
 
 static void exynos_ssp_print_user_list(struct device *dev)
 {
@@ -217,16 +215,16 @@ static int exynos_ssp_powerctl_update(struct device *dev, bool power_on, bool pa
 
 	if (power_on == 1 && pass == 1) {
 		link->init_count++;
-		link->init_time = ktime_get_boot_ns() / NSEC_PER_USEC;
+		link->init_time = ktime_get_boottime_ns() / NSEC_PER_USEC;
 	} else if (power_on == 1 && pass == 0) {
 		link->init_fail_count++;
-		link->init_fail_time = ktime_get_boot_ns() / NSEC_PER_USEC;
+		link->init_fail_time = ktime_get_boottime_ns() / NSEC_PER_USEC;
 	} else if (power_on == 0 && pass == 1) {
 		link->exit_count++;
-		link->exit_time = ktime_get_boot_ns() / NSEC_PER_USEC;
+		link->exit_time = ktime_get_boottime_ns() / NSEC_PER_USEC;
 	} else if (power_on == 0 && pass == 0) {
 		link->exit_fail_count++;
-		link->exit_fail_time = ktime_get_boot_ns() / NSEC_PER_USEC;
+		link->exit_fail_time = ktime_get_boottime_ns() / NSEC_PER_USEC;
 	}
 
 	return ret;
@@ -439,40 +437,13 @@ static int exynos_ssp_self_test(struct device *dev, uint64_t test_mode)
 	return ret;
 }
 
+/*
+ * shortcut: 4.19 masked ITMON bus errors on the SSP path while it boots;
+ * 5.15 ITMON has no itmon_wa_enable() and is not built for Exynos 990.
+ * Port the mask when EXYNOS_ITMON is enabled here.
+ */
 static void exynos_ssp_itmon_enable(struct device *dev, uint64_t enable)
 {
-	static int ssp_itmon_enable_flag = 1;
-
-	if (!(exynos_soc_info.main_rev && exynos_soc_info.sub_rev))
-		return;
-
-	if (enable) {
-		if (ssp_itmon_enable_flag)
-			return;
-
-		dev_info(dev, "enable itmon\n");
-		itmon_wa_enable("SSP", M_NODE, true);
-		itmon_wa_enable("BUS0_CORE", T_S_NODE, true);
-		itmon_wa_enable("BUS0_CORE", T_M_NODE, true);
-		itmon_wa_enable("ALIVE", S_NODE, true);
-		itmon_wa_enable("BUS0_DP", M_NODE, true);
-		itmon_wa_enable("BUS0_DP", S_NODE, true);
-
-		ssp_itmon_enable_flag = 1;
-	} else {
-		if (!ssp_itmon_enable_flag)
-			return;
-
-		dev_info(dev, "disable itmon\n");
-		itmon_wa_enable("SSP", M_NODE, false);
-		itmon_wa_enable("BUS0_CORE", T_S_NODE, false);
-		itmon_wa_enable("BUS0_CORE", T_M_NODE, false);
-		itmon_wa_enable("ALIVE", S_NODE, false);
-		itmon_wa_enable("BUS0_DP", M_NODE, false);
-		itmon_wa_enable("BUS0_DP", S_NODE, false);
-
-		ssp_itmon_enable_flag = 0;
-	}
 }
 
 static int exynos_ssp_enable(struct ssp_device *sspdev)
@@ -484,7 +455,7 @@ static int exynos_ssp_enable(struct ssp_device *sspdev)
 
 	if (ssp_power_count == 1) {
 		pm_stay_awake(sspdev->dev);
-		pm_qos_update_request(&ssp_pm_int_request, 200000);
+		exynos_pm_qos_update_request(&ssp_pm_int_request, 200000);
 
 		ret = exynos_ssp_power_on(sspdev);
 		if (unlikely(ret))
@@ -520,7 +491,7 @@ ERR_OUT2:
 
 ERR_OUT1:
 	exynos_ssp_powerctl_update(sspdev->dev, 1, 0);
-	pm_qos_update_request(&ssp_pm_int_request, 0);
+	exynos_pm_qos_update_request(&ssp_pm_int_request, 0);
 	pm_relax(sspdev->dev);
 	--ssp_power_count;
 
@@ -550,7 +521,7 @@ static int exynos_ssp_disable(struct ssp_device *sspdev)
 		/* keep the wake-up lock when above two functions fail */
 		/* for debugging purpose */
 
-		pm_qos_update_request(&ssp_pm_int_request, 0);
+		exynos_pm_qos_update_request(&ssp_pm_int_request, 0);
 		pm_relax(sspdev->dev);
 	}
 
@@ -564,7 +535,7 @@ ERR_OUT1:
 
 ERR_OUT2:
 	exynos_ssp_powerctl_update(sspdev->dev, 0, 0);
-	pm_qos_update_request(&ssp_pm_int_request, 0);
+	exynos_pm_qos_update_request(&ssp_pm_int_request, 0);
 	pm_relax(sspdev->dev);
 
 	return ret;
@@ -648,8 +619,6 @@ static int exynos_ssp_probe(struct platform_device *pdev)
 	int ret = SSP_RET_OK;
 	struct ssp_device *sspdev = NULL;
 
-	dev_set_socdata(&pdev->dev, "Exynos", "CMSSP");
-
 	sspdev = kzalloc(sizeof(struct ssp_device), GFP_KERNEL);
 	if (!sspdev) {
 		dev_err(&pdev->dev, "%s: fail to kzalloc.\n", __func__);
@@ -666,8 +635,8 @@ static int exynos_ssp_probe(struct platform_device *pdev)
 
 	/* enable runtime PM */
 	exynos_ssp_pm_enable(sspdev);
-	pm_qos_add_request(&ssp_pm_int_request, PM_QOS_DEVICE_THROUGHPUT, 0);
-	ssp_idle_ip_index = exynos_get_idle_ip_index(dev_name(sspdev->dev));
+	exynos_pm_qos_add_request(&ssp_pm_int_request, PM_QOS_DEVICE_THROUGHPUT, 0);
+	ssp_idle_ip_index = exynos_get_idle_ip_index(dev_name(sspdev->dev), 0);
 	exynos_update_ip_idle_status(ssp_idle_ip_index, 1);
 
 	/* set misc driver */
