@@ -2055,6 +2055,9 @@
 		/* the 5.15 dwc3-exynos glue looks the PHYs up on this node */
 		phys = <&usbdrd_phy0 0>, <&usbdrd_phy0 1>;
 		phy-names = "usb2-phy", "usb3-phy";
+		/* required by the 5.15 glue; same values as the dwc3 child */
+		exynos,adj-sof-accuracy = <0>;
+		exynos,enable_sprs_transfer = <1>;
 
 		usbdrd_dwc3: dwc3 {
 			compatible = "synopsys,dwc3";
