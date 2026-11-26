@@ -1032,6 +1032,17 @@ config RT_GROUP_SCHED
 
 endif #CGROUP_SCHED
 
+config SCHED_TUNE_COMPAT
+	bool "Legacy schedtune cgroup interface for old Android userspace"
+	depends on CGROUP_SCHED
+	help
+	  Provide the v1 "schedtune" cgroup controller with schedtune.boost
+	  and schedtune.prefer_idle files so that Android 11-era
+	  task_profiles can set up cgroups. Values are only stored; boosting
+	  is handled by uclamp.
+
+	  Say N unless booting a vendor/ROM built for a 4.x Android kernel.
+
 config UCLAMP_TASK_GROUP
 	bool "Utilization clamping per group of tasks"
 	depends on CGROUP_SCHED
