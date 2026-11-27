@@ -1682,7 +1682,23 @@ static struct platform_driver exynos5_i2c_driver = {
 	},
 };
 
-module_platform_driver(exynos5_i2c_driver);
+/*
+ * subsys_initcall, as on 4.19: PMICs on hsi2c (e.g. the Exynos 990 S2DOS05
+ * display supplies) must register before panel and touch drivers take
+ * their regulators, or those get dummies and the real rails are switched
+ * off as unused.
+ */
+static int __init exynos5_i2c_driver_init(void)
+{
+	return platform_driver_register(&exynos5_i2c_driver);
+}
+subsys_initcall(exynos5_i2c_driver_init);
+
+static void __exit exynos5_i2c_driver_exit(void)
+{
+	platform_driver_unregister(&exynos5_i2c_driver);
+}
+module_exit(exynos5_i2c_driver_exit);
 
 MODULE_DESCRIPTION("Exynos5 HS-I2C Bus driver");
 MODULE_AUTHOR("Naveen Krishna Chatradhi <ch.naveen@samsung.com>");
