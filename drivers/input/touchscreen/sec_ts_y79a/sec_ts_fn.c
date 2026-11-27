@@ -1659,7 +1659,7 @@ static ssize_t sec_ts_enabled_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", !ts->input_dev->disabled);
+	return snprintf(buf, PAGE_SIZE, "%d\n", !ts->input_disabled);
 }
 
 static ssize_t sec_ts_enabled_store(struct device *dev,
@@ -1694,18 +1694,19 @@ static ssize_t sec_ts_enabled_store(struct device *dev,
 		return ret;
 
 	if (enable) {
-		if (!input_dev->disabled)
+		if (!ts->input_disabled)
 			goto out;
 
-		if (input_dev->users_private && input_dev->open) {
+		if (ts->users_private && input_dev->open) {
 			ret = input_dev->open(input_dev);
 			if (ret)
 				goto out;
 		}
-		input_dev->users = input_dev->users_private;
-		input_dev->disabled = false;
-	} else if (!input_dev->disabled) {
-		input_dev->disabled = true;
+		input_dev->users = ts->users_private;
+		ts->input_disabled = false;
+	} else if (!ts->input_disabled) {
+		ts->input_disabled = true;
+		ts->users_private = input_dev->users;
 		if (input_dev->users && input_dev->close)
 			input_dev->close(input_dev);
 		input_dev->users = 0;
@@ -3114,7 +3115,7 @@ static void module_on_master(void *device_data)
 
 	ret = sec_ts_start_device(ts);
 
-	if (ts->input_dev->disabled) {
+	if (ts->input_disabled) {
 		sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
 		ts->power_status = SEC_TS_STATE_LPM;
 	}

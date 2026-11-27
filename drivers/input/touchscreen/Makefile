@@ -120,3 +120,4 @@ obj-$(CONFIG_TOUCHSCREEN_ZINITIX)	+= zinitix.o
 ifeq ($(CONFIG_EXYNOS_VARIANT1),y)
 include $(srctree)/drivers/input/touchscreen/Makefile.variant1
 endif
+obj-$(CONFIG_TOUCHSCREEN_SEC_TS_Y79A)	+= sec_ts_y79a/

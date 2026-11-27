@@ -13,6 +13,17 @@
 #include "sec_ts.h"
 #include <linux/spu-verify.h>
 
+/*
+ * shortcut: 5.15 has no SPU signature verifier for this tree, so signed
+ * (/spu) TSP firmware updates are refused. Drop this when spu-verify is
+ * built; the IC keeps the firmware it booted with.
+ */
+long __weak spu_firmware_signature_verify(const char *fw_name,
+					  const u8 *fw_data, const long fw_size)
+{
+	return -EOPNOTSUPP;
+}
+
 #define SEC_TS_FW_BLK_SIZE		256
 
 enum {
@@ -749,7 +760,12 @@ int sec_ts_firmware_update_on_probe(struct sec_ts_data *ts, bool force_update)
 
 	/* Loading Firmware */
 	if (request_firmware(&fw_entry, fw_path, &ts->client->dev) !=  0) {
-		input_err(true, &ts->client->dev, "%s: firmware is not available\n", __func__);
+		/*
+		 * The image is not shipped (no fw blob in this tree or vendor):
+		 * keep the firmware already in the IC instead of failing probe.
+		 */
+		input_err(true, &ts->client->dev, "%s: firmware is not available, keep IC firmware\n", __func__);
+		result = 0;
 		goto err_request_fw;
 	}
 	input_info(true, &ts->client->dev, "%s: request firmware done! size = %d\n", __func__, (int)fw_entry->size);
@@ -895,7 +911,6 @@ static int sec_ts_load_fw(struct sec_ts_data *ts, const char *file_path)
 {
 	fw_header *fw_hd;
 	struct file *fp;
-	mm_segment_t old_fs;
 	long fw_size, nread;
 	int error = 0;
 	long spu_ret = 0;
@@ -903,9 +918,6 @@ static int sec_ts_load_fw(struct sec_ts_data *ts, const char *file_path)
 #ifdef TCLM_CONCEPT
 	int restore_cal = 0;
 #endif
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-
 	fp = filp_open(file_path, O_RDONLY, S_IRUSR);
 	if (IS_ERR(fp)) {
 		input_err(true, ts->dev, "%s: failed to open %s.\n", __func__,
@@ -926,8 +938,7 @@ static int sec_ts_load_fw(struct sec_ts_data *ts, const char *file_path)
 			filp_close(fp, NULL);
 			goto open_err;
 		}
-		nread = vfs_read(fp, (char __user *)fw_data,
-				fw_size, &fp->f_pos);
+		nread = kernel_read(fp, fw_data, fw_size, &fp->f_pos);
 
 		input_info(true, ts->dev,
 				"%s: start, file path %s, size %ld Bytes\n",
@@ -1021,7 +1032,6 @@ done:
 	filp_close(fp, NULL);
 
 open_err:
-	set_fs(old_fs);
 	return error;
 }
 

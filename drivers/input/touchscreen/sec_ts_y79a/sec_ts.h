@@ -36,7 +36,7 @@
 #include <linux/time.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
-#include <linux/wakelock.h>
+#include <linux/pm_wakeup.h>
 #include <linux/workqueue.h>
 #include <linux/power_supply.h>
 
@@ -790,7 +790,10 @@ struct sec_ts_data {
 #endif
 #endif
 	struct completion resume_done;
-	struct wake_lock wakelock;
+	struct wakeup_source *wakelock;
+	/* 4.19 kept these in struct input_dev (Samsung input core) */
+	bool input_disabled;
+	unsigned int users_private;
 	struct sec_cmd_data sec;
 	short *pFrame;
 

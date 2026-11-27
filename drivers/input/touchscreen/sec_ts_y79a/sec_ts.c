@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/proc_fs.h>
 #include "sec_ts.h"
 
 struct sec_ts_data *tsp_info;
@@ -733,11 +734,11 @@ static int sec_ts_write_to_sponge(struct sec_ts_data *ts, u8 *data, int len)
 
 static void sec_ts_set_utc_sponge(struct sec_ts_data *ts)
 {
-	struct timeval current_time;
+	struct __kernel_old_timeval current_time;
 	int ret;
 	u8 data[6] = {SEC_TS_CMD_SPONGE_OFFSET_UTC, 0};
 
-	do_gettimeofday(&current_time);
+	current_time = ns_to_kernel_old_timeval(ktime_get_real_ns());
 	data[2] = (0xFF & (u8)((current_time.tv_sec) >> 0));
 	data[3] = (0xFF & (u8)((current_time.tv_sec) >> 8));
 	data[4] = (0xFF & (u8)((current_time.tv_sec) >> 16));
@@ -1086,7 +1087,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 	char location[SEC_TS_LOCATION_DETECT_SIZE] = { 0, };
 
 	if (ts->power_status == SEC_TS_STATE_LPM) {
-		wake_lock_timeout(&ts->wakelock, msecs_to_jiffies(500));
+		__pm_wakeup_event(ts->wakelock, 500);
 
 		/* waiting for blsp block resuming, if not occurs i2c error */
 		ret = wait_for_completion_interruptible_timeout(&ts->resume_done, msecs_to_jiffies(500));
@@ -1576,7 +1577,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 static irqreturn_t sec_ts_irq_thread(int irq, void *ptr)
 {
 	struct sec_ts_data *ts = (struct sec_ts_data *)ptr;
-	struct timeval enter_time, current_time;
+	struct __kernel_old_timeval enter_time, current_time;
 	int time_diff, prev_touch_count;
 
 	if (gpio_get_value(ts->plat_data->irq_gpio) == 1)
@@ -1601,9 +1602,9 @@ static irqreturn_t sec_ts_irq_thread(int irq, void *ptr)
 
 	prev_touch_count = ts->touch_count;
 	
-	do_gettimeofday(&enter_time);
+	enter_time = ns_to_kernel_old_timeval(ktime_get_real_ns());
 	sec_ts_read_event(ts);
-	do_gettimeofday(&current_time);
+	current_time = ns_to_kernel_old_timeval(ktime_get_real_ns());
 
 	mutex_unlock(&ts->eventlock);
 
@@ -1892,16 +1893,14 @@ static ssize_t sec_ts_tsp_fail_hist_read(struct file *file, char __user *buf,
 	return sec_ts_tsp_fail_hist_all_read(file, buf, len, offset);
 }
 
-static const struct file_operations tsp_cmoffset_all_file_ops = {
-	.owner = THIS_MODULE,
-	.read = sec_ts_tsp_cmoffset_read,
-	.llseek = generic_file_llseek,
+static const struct proc_ops tsp_cmoffset_all_file_ops = {
+	.proc_read = sec_ts_tsp_cmoffset_read,
+	.proc_lseek = generic_file_llseek,
 };
 
-static const struct file_operations tsp_fail_hist_all_file_ops = {
-	.owner = THIS_MODULE,
-	.read = sec_ts_tsp_fail_hist_read,
-	.llseek = generic_file_llseek,
+static const struct proc_ops tsp_fail_hist_all_file_ops = {
+	.proc_read = sec_ts_tsp_fail_hist_read,
+	.proc_lseek = generic_file_llseek,
 };
 
 static void sec_ts_init_proc(struct sec_ts_data *ts)
@@ -2015,28 +2014,38 @@ int sec_ts_power(void *data, bool on)
 {
 	struct sec_ts_data *ts = (struct sec_ts_data *)data;
 	const struct sec_ts_plat_data *pdata = ts->plat_data;
-	struct regulator *regulator_dvdd = NULL;
-	struct regulator *regulator_avdd = NULL;
+	/*
+	 * Held for the device lifetime: on 5.15 putting an enabled consumer
+	 * warns and leaks its enable, so the next off would be unbalanced.
+	 */
+	static struct regulator *regulator_dvdd;
+	static struct regulator *regulator_avdd;
 	static bool enabled;
 	int ret = 0;
 
 	if (enabled == on)
 		return ret;
 
-	regulator_dvdd = regulator_get(NULL, pdata->regulator_dvdd);
-	if (IS_ERR_OR_NULL(regulator_dvdd)) {
-		input_err(true, &ts->client->dev, "%s: Failed to get %s regulator.\n",
-				__func__, pdata->regulator_dvdd);
-		ret = PTR_ERR(regulator_dvdd);
-		goto error;
+	if (!regulator_dvdd) {
+		regulator_dvdd = regulator_get(NULL, pdata->regulator_dvdd);
+		if (IS_ERR(regulator_dvdd)) {
+			input_err(true, &ts->client->dev, "%s: Failed to get %s regulator.\n",
+					__func__, pdata->regulator_dvdd);
+			ret = PTR_ERR(regulator_dvdd);
+			regulator_dvdd = NULL;
+			return ret;
+		}
 	}
 
-	regulator_avdd = regulator_get(NULL, pdata->regulator_avdd);
-	if (IS_ERR_OR_NULL(regulator_avdd)) {
-		input_err(true, &ts->client->dev, "%s: Failed to get %s regulator.\n",
-				__func__, pdata->regulator_avdd);
-		ret = PTR_ERR(regulator_avdd);
-		goto error;
+	if (!regulator_avdd) {
+		regulator_avdd = regulator_get(NULL, pdata->regulator_avdd);
+		if (IS_ERR(regulator_avdd)) {
+			input_err(true, &ts->client->dev, "%s: Failed to get %s regulator.\n",
+					__func__, pdata->regulator_avdd);
+			ret = PTR_ERR(regulator_avdd);
+			regulator_avdd = NULL;
+			return ret;
+		}
 	}
 
 	if (on) {
@@ -2065,10 +2074,6 @@ out:
 	input_err(true, &ts->client->dev, "%s: %s: avdd:%s, dvdd:%s\n", __func__, on ? "on" : "off",
 			regulator_is_enabled(regulator_avdd) ? "on" : "off",
 			regulator_is_enabled(regulator_dvdd) ? "on" : "off");
-
-error:
-	regulator_put(regulator_dvdd);
-	regulator_put(regulator_avdd);
 
 	return ret;
 }
@@ -2588,7 +2593,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	mutex_init(&ts->modechange);
 	mutex_init(&ts->sponge_mutex);
 
-	wake_lock_init(&ts->wakelock, WAKE_LOCK_SUSPEND, "tsp_wakelock");
+	ts->wakelock = wakeup_source_register(&client->dev, "tsp_wakelock");
 	init_completion(&ts->resume_done);
 	complete_all(&ts->resume_done);
 	INIT_WORK(&ts->lpm_rearm_work, sec_ts_lpm_rearm_work);
@@ -2820,7 +2825,7 @@ err_input_register_device:
 	kfree(ts->pFrame);
 err_allocate_frame:
 err_init:
-	wake_lock_destroy(&ts->wakelock);
+	wakeup_source_unregister(ts->wakelock);
 	sec_ts_power(ts, false);
 	if (ts->plat_data->support_ear_detect) {
 		if (ts->input_dev_proximity)
@@ -2991,7 +2996,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 	}
 
 	mutex_lock(&ts->modechange);
-	wake_lock(&ts->wakelock);
+	__pm_stay_awake(ts->wakelock);
 
 	ts->reset_is_on_going = true;
 	input_info(true, &ts->client->dev, "%s\n", __func__);
@@ -3016,12 +3021,12 @@ static void sec_ts_reset_work(struct work_struct *work)
 			sec_cmd_send_event_to_user(&ts->sec, NULL, result);
 		}
 
-		wake_unlock(&ts->wakelock);
+		__pm_relax(ts->wakelock);
 
 		return;
 	}
 
-	if (ts->input_dev_touch->disabled) {
+	if (ts->input_disabled) {
 		input_err(true, &ts->client->dev, "%s: call input_close\n", __func__);
 
 		if (ts->lowpower_mode || ts->ed_enable) {
@@ -3033,7 +3038,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 				if (!shutdown_is_on_going_tsp)
 					schedule_delayed_work(&ts->reset_work, msecs_to_jiffies(TOUCH_RESET_DWORK_TIME));
 				mutex_unlock(&ts->modechange);
-				wake_unlock(&ts->wakelock);
+				__pm_relax(ts->wakelock);
 				return;
 			}
 
@@ -3058,7 +3063,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 		sec_cmd_send_event_to_user(&ts->sec, NULL, result);
 	}
 
-	wake_unlock(&ts->wakelock);
+	__pm_relax(ts->wakelock);
 }
 #endif
 
@@ -3423,7 +3428,7 @@ static int sec_ts_remove(struct i2c_client *client)
 	p_ghost_check = NULL;
 #endif
 	device_init_wakeup(&client->dev, false);
-	wake_lock_destroy(&ts->wakelock);
+	wakeup_source_unregister(ts->wakelock);
 
 	ts->lowpower_mode = false;
 	ts->probe_done = false;
@@ -3557,8 +3562,8 @@ static int sec_ts_pm_suspend(struct device *dev)
 			goto out;
 		}
 
-		if (!ts->input_dev->disabled) {
-			ts->input_dev->disabled = true;
+		if (!ts->input_disabled) {
+			ts->input_disabled = true;
 			if (ts->input_dev->users && ts->input_dev->close) {
 				input_err(true, &ts->client->dev,
 						"%s called without input_close\n",
@@ -3692,6 +3697,8 @@ static struct i2c_driver sec_ts_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,
 		.name	= SEC_TS_I2C_NAME,
+		/* a touch IC that does not answer retries I2C for seconds: never hold up boot */
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 #ifdef CONFIG_OF
 		.of_match_table = sec_ts_match_table,
 #endif

@@ -1,22 +1,6 @@
-#
-# Samsung Electronics TOUCH driver configuration
-#
-
 config TOUCHSCREEN_SEC_TS_Y79A
-        tristate "Samsung Electronics Touchscreen"
-        depends on I2C
-        help
-          Say Y here if you want support for SEC touchscreen controllers.
-          If unsure, say N.
-
-          To compile this driver as a module, choose M here: the
-          module will be called sec_ts.
-
-config TOUCHSCREEN_SEC_TS_GLOVEMODE
-        tristate "Samsung Electronics Touchscreen"
-        depends on I2C
-        help
-          Say Y here if you have a Samsung Electronics Touchscreen and want to enable
-          support for the built-in touchscreen.
-
-          If unsure, say N.
+	bool "Samsung SEC_TS Y79A touchscreen (Exynos 990 x1s/y2s/z3s, 4.19 driver)"
+	depends on I2C && SOC_EXYNOS9830
+	help
+	  Touch controller of the Galaxy S20 series, with the 4.19 sec_cmd and
+	  TCLM support it was written against.
