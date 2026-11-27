@@ -26,7 +26,7 @@
 
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
 #include <soc/samsung/exynos-devfreq.h>
-#include "../dpu30/exynos-debug-compat.h"
+#include <soc/samsung/exynos-debug.h>
 
 #include "decon.h"
 #include "dsim.h"

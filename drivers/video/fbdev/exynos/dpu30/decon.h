@@ -37,7 +37,7 @@
 #include <linux/exynos_iovmm.h>
 #include <linux/sync_file.h>
 #include <linux/dma-buf.h>
-#include "../dpu30/exynos-debug-compat.h"
+#include <soc/samsung/exynos-debug.h>
 
 /* TODO: SoC dependency will be removed */
 #include "./cal_9830/regs-decon.h"
