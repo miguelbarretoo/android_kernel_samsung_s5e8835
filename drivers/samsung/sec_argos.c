@@ -974,7 +974,7 @@ err_out:
 }
 #endif
 
-static int __init arogs_parse_clusters(void)
+static int arogs_parse_clusters(void)
 {
 	struct device_node *cpus, *map, *cluster;
 	char name[20];
