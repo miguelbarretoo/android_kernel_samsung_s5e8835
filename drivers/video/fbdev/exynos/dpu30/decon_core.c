@@ -2063,7 +2063,7 @@ static int decon_check_rsc_conflict(struct decon_device *decon,
 
 	for (i = 0; i < decon->dt.decon_cnt; ++i) {
 		other_decon = get_decon_drvdata(i);
-		if (other_decon->id == decon->id)
+		if (!other_decon || other_decon->id == decon->id)
 			continue;
 
 		if (other_decon->prev_used_dpp & cur_dpps) {
@@ -5762,6 +5762,8 @@ err_fsync:
 err_vsync:
 	iounmap(decon->res.ss_regs);
 err_res:
+	/* decon is devm memory: freed when probe fails, so forget it */
+	decon_drvdata[decon->id] = NULL;
 err:
 	decon_err("decon probe fail");
 	return ret;
