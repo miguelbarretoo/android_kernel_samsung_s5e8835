@@ -6,10 +6,13 @@
 #ifndef __LINUX_ION_EXYNOS_H__
 #define __LINUX_ION_EXYNOS_H__
 
+#include <linux/dma-direction.h>
 #include <linux/dma-heap.h>
 #include <linux/err.h>
 #include <linux/fcntl.h>
 #include <linux/string.h>
+
+struct dma_buf_attachment;
 
 #define ION_FLAG_CACHED 1
 #define ION_FLAG_NOZEROED 8
@@ -34,5 +37,13 @@ static inline struct dma_buf *ion_alloc_dmabuf(const char *heap_name,
 	dma_heap_put(heap);
 	return buf;
 }
+
+#ifdef CONFIG_EXYNOS_IOVMM
+/* map a DMA-BUF attachment in its device's Exynos 990 IOVMM domain */
+dma_addr_t ion_iovmm_map(struct dma_buf_attachment *attachment,
+			 off_t offset, size_t size,
+			 enum dma_data_direction direction, int prop);
+void ion_iovmm_unmap(struct dma_buf_attachment *attachment, dma_addr_t iova);
+#endif
 
 #endif /* __LINUX_ION_EXYNOS_H__ */
