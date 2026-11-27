@@ -56,10 +56,14 @@ def main():
             f.write(f"{name}:{' ' + deps if deps else ''}\n")
     with open(os.path.join(out, "modules.load"), "w") as f:
         f.write("".join(n + "\n" for n in wanted))
-    for extra in ("modules.softdep", "modules.alias"):
-        path = os.path.join(src, extra)
-        if os.path.exists(path):
-            shutil.copy2(path, os.path.join(out, extra))
+    # init wants "alias <pattern> <module>" and only for modules it can load
+    names = {n[:-3].replace("-", "_") for n in packed}
+    with open(os.path.join(src, "modules.alias")) as f, \
+            open(os.path.join(out, "modules.alias"), "w") as o:
+        for line in f:
+            w = line.split()
+            if len(w) == 3 and w[0] == "alias" and w[2] in names:
+                o.write(line)
 
 
 if __name__ == "__main__":
