@@ -14,7 +14,7 @@
 #include <linux/clk.h>
 #include <linux/of.h>
 #include <linux/exynos_iovmm.h>
-#include <linux/videodev2_exynos_media.h>
+#include <linux/videodev2_exynos_media_990.h>
 #include <linux/console.h>
 #include <linux/platform_device.h>
 

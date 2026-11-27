@@ -13,7 +13,7 @@
 #ifndef __EXYNOS_MFC_MEDIA_H
 #define __EXYNOS_MFC_MEDIA_H __FILE__
 
-#include <linux/videodev2_exynos_media.h>
+#include <linux/videodev2_exynos_media_990.h>
 
 /* RGB formats */
 #define V4L2_PIX_FMT_RGB32X    v4l2_fourcc('R', 'G', 'B', 'X') /* 32  RGB-8-8-8-8   */
@@ -78,6 +78,14 @@ enum v4l2_mpeg_mfc51_video_frame_type {
 
 
 /* CID base for MFC controls (MPEG_CLASS) */
+/* 4.19 names the vendor Codec2/OMX ABI was built with */
+#ifndef V4L2_CTRL_CLASS_MPEG
+#define V4L2_CTRL_CLASS_MPEG	V4L2_CTRL_CLASS_CODEC
+#endif
+#define V4L2_MPEG_VIDEO_MULTI_SICE_MODE_SINGLE		V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE
+#define V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB		V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_MB
+#define V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES	V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_BYTES
+
 #define V4L2_CID_MPEG_MFC_BASE		(V4L2_CTRL_CLASS_MPEG | 0x2000)
 
 #define V4L2_CID_MPEG_VIDEO_H264_SEI_FP_AVAIL		\
@@ -399,6 +407,8 @@ enum v4l2_mpeg_mfc51_video_frame_type {
 #define V4L2_CID_MPEG_VIDEO_DISABLE_IVF_HEADER			\
 					(V4L2_CID_MPEG_MFC_BASE + 181)
 /* empty number */
+/* the vendor HAL uses the MFC id, not the upstream codec control */
+#undef V4L2_CID_MPEG_VIDEO_VP9_LEVEL
 #define V4L2_CID_MPEG_VIDEO_VP9_LEVEL				\
 					(V4L2_CID_MPEG_MFC_BASE + 183)
 #define V4L2_CID_MPEG_VIDEO_UNCOMP_FMT				\
