@@ -434,7 +434,11 @@ static int s51xx_pcie_probe(struct pci_dev *pdev,
 	pdev->resource[0].start = val;
 	pdev->resource[0].end = val + SZ_4K;
 	//pdev->resource[0].flags = 0x82000000;
-	pci_assign_resource(pdev, 0);
+	ret = pci_assign_resource(pdev, 0);
+	if (ret) {
+		dev_err(dev, "Failed to assign modem BAR0: %d\n", ret);
+		return ret;
+	}
 
 	/* get Doorbell base address from root bus range */
 	tmp_rsc = bus_self->resource + resno;

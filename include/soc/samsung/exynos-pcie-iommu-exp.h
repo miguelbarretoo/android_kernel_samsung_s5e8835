@@ -55,6 +55,7 @@ static void __maybe_unused pcie_sysmmu_all_buff_free(int ch_num)
 static int pcie_sysmmu_add_pcie_fault_handler(void (*func)(int))
 {
 	pr_err("PCIe SysMMU is NOT Enabled!!!\n");
+	return -ENODEV;
 }
 #endif
 #endif /* _EXYNOS_PCIE_IOMMU_EXP_H_ */
