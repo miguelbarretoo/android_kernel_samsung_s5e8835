@@ -185,10 +185,9 @@ static int mfc_enc_querycap(struct file *file, void *priv,
 			| V4L2_CAP_VIDEO_OUTPUT
 			| V4L2_CAP_VIDEO_CAPTURE_MPLANE
 			| V4L2_CAP_VIDEO_OUTPUT_MPLANE
-			| V4L2_CAP_STREAMING
-			| V4L2_CAP_DEVICE_CAPS;
-
-	cap->capabilities = cap->device_caps;
+			| V4L2_CAP_STREAMING;
+	/* 5.15: device_caps must equal vfd->device_caps; DEVICE_CAPS goes in capabilities */
+	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 
 	return 0;
 }
@@ -884,10 +883,10 @@ static int mfc_enc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 						i, buf->m.planes[i].bytesused);
 			}
 		}
-		ret = vb2_qbuf(&ctx->vq_src, buf);
+		ret = vb2_qbuf(&ctx->vq_src, NULL, buf);
 	} else {
 		mfc_debug(4, "enc dst buf[%d] Q\n", buf->index);
-		ret = vb2_qbuf(&ctx->vq_dst, buf);
+		ret = vb2_qbuf(&ctx->vq_dst, NULL, buf);
 	}
 
 	atomic_inc(&dev->queued_cnt);
@@ -2247,18 +2246,43 @@ static int mfc_enc_try_ext_ctrls(struct file *file, void *priv,
 	return ret;
 }
 
+/* 5.15 has no g/s_crop: VIDIOC_G/S_CROP reach the driver as selections */
+static int mfc_enc_g_selection(struct file *file, void *priv,
+		struct v4l2_selection *s)
+{
+	struct v4l2_crop cr = { .type = s->type };
+	int ret = mfc_enc_g_crop(file, priv, &cr);
+
+	if (!ret)
+		s->r = cr.c;
+	return ret;
+}
+
+static int mfc_enc_s_selection(struct file *file, void *priv,
+		struct v4l2_selection *s)
+{
+	/* the core hands single-plane types; the 4.19 handler expects mplane */
+	struct v4l2_crop cr = {
+		.type = V4L2_TYPE_IS_OUTPUT(s->type) ?
+			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : s->type,
+		.c = s->r,
+	};
+
+	return mfc_enc_s_crop(file, priv, &cr);
+}
+
 static const struct v4l2_ioctl_ops mfc_enc_ioctl_ops = {
 	.vidioc_querycap		= mfc_enc_querycap,
-	.vidioc_enum_fmt_vid_cap_mplane	= mfc_enc_enum_fmt_vid_cap_mplane,
-	.vidioc_enum_fmt_vid_out_mplane	= mfc_enc_enum_fmt_vid_out_mplane,
+	.vidioc_enum_fmt_vid_cap	= mfc_enc_enum_fmt_vid_cap_mplane,
+	.vidioc_enum_fmt_vid_out	= mfc_enc_enum_fmt_vid_out_mplane,
 	.vidioc_g_fmt_vid_cap_mplane	= mfc_enc_g_fmt,
 	.vidioc_g_fmt_vid_out_mplane	= mfc_enc_g_fmt,
 	.vidioc_try_fmt_vid_cap_mplane	= mfc_enc_try_fmt,
 	.vidioc_try_fmt_vid_out_mplane	= mfc_enc_try_fmt,
 	.vidioc_s_fmt_vid_cap_mplane	= mfc_enc_s_fmt_vid_cap_mplane,
 	.vidioc_s_fmt_vid_out_mplane	= mfc_enc_s_fmt_vid_out_mplane,
-	.vidioc_g_crop			= mfc_enc_g_crop,
-	.vidioc_s_crop			= mfc_enc_s_crop,
+	.vidioc_g_selection		= mfc_enc_g_selection,
+	.vidioc_s_selection		= mfc_enc_s_selection,
 	.vidioc_reqbufs			= mfc_enc_reqbufs,
 	.vidioc_querybuf		= mfc_enc_querybuf,
 	.vidioc_qbuf			= mfc_enc_qbuf,

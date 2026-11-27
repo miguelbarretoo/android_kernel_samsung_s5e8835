@@ -14,6 +14,22 @@
 #define __MFC_MEM_H __FILE__
 
 #include "mfc_common.h"
+#include "mfc_vb2_dma_sg.h"
+
+/* 4.19 dma_buf_vmap() returned the address; 5.15 fills a struct dma_buf_map */
+static inline void *mfc_dma_buf_vmap(struct dma_buf *buf)
+{
+	struct dma_buf_map map;
+
+	return dma_buf_vmap(buf, &map) ? NULL : map.vaddr;
+}
+
+static inline void mfc_dma_buf_vunmap(struct dma_buf *buf, void *vaddr)
+{
+	struct dma_buf_map map = DMA_BUF_MAP_INIT_VADDR(vaddr);
+
+	dma_buf_vunmap(buf, &map);
+}
 
 /* Offset base used to differentiate between CAPTURE and OUTPUT
 *  while mmaping */
@@ -24,7 +40,7 @@ static inline dma_addr_t mfc_mem_get_daddr_vb(
 {
 	dma_addr_t addr = 0;
 
-	addr = vb2_dma_sg_plane_dma_addr(vb, n);
+	addr = mfc_vb2_dma_sg_plane_dma_addr(vb, n);
 	WARN_ON((addr == 0) || IS_ERR_VALUE(addr));
 
 	return addr;

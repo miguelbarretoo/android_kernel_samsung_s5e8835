@@ -58,7 +58,7 @@ static inline void mfc_perf_measure_on(struct mfc_dev *dev)
 	int diff;
 
 	if (dev->perf.drv_margin) {
-		do_gettimeofday(&dev->perf.end);
+		dev->perf.end = ns_to_kernel_old_timeval(ktime_get_real_ns());
 
 		diff = (dev->perf.end.tv_sec * 1000000 + dev->perf.end.tv_usec)
 			- (dev->perf.begin.tv_sec * 1000000 + dev->perf.begin.tv_usec);
@@ -68,7 +68,7 @@ static inline void mfc_perf_measure_on(struct mfc_dev *dev)
 		dev->perf.drv_margin = 0;
 	}
 
-	do_gettimeofday(&dev->perf.begin);
+	dev->perf.begin = ns_to_kernel_old_timeval(ktime_get_real_ns());
 
 	__mfc_measure_on(dev);
 
@@ -83,7 +83,7 @@ static inline void mfc_perf_measure_off(struct mfc_dev *dev)
 	if ((dev->perf.new_start) && (dev->perf.count > 0)) {
 		__mfc_measure_off(dev);
 
-		do_gettimeofday(&dev->perf.end);
+		dev->perf.end = ns_to_kernel_old_timeval(ktime_get_real_ns());
 
 		diff = (dev->perf.end.tv_sec * 1000000 + dev->perf.end.tv_usec)
 			- (dev->perf.begin.tv_sec * 1000000 + dev->perf.begin.tv_usec);
@@ -95,7 +95,7 @@ static inline void mfc_perf_measure_off(struct mfc_dev *dev)
 
 		dev->perf.drv_margin = 1;
 
-		do_gettimeofday(&dev->perf.begin);
+		dev->perf.begin = ns_to_kernel_old_timeval(ktime_get_real_ns());
 	}
 
 	dev->perf.new_start = 0;

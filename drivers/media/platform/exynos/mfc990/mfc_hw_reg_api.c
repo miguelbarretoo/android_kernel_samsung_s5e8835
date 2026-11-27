@@ -94,7 +94,7 @@ void mfc_cmd_host2risc(struct mfc_dev *dev, int cmd)
 	}
 
 	dev->last_cmd = cmd;
-	dev->last_cmd_time = ktime_to_timeval(ktime_get());
+	dev->last_cmd_time = ns_to_kernel_old_timeval(ktime_to_ns(ktime_get()));
 
 	/* Record if the command incurs cache flush */
 	dev->last_cmd_has_cache_flush =

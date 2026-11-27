@@ -100,10 +100,9 @@ static int mfc_dec_querycap(struct file *file, void *priv,
 			| V4L2_CAP_VIDEO_OUTPUT
 			| V4L2_CAP_VIDEO_CAPTURE_MPLANE
 			| V4L2_CAP_VIDEO_OUTPUT_MPLANE
-			| V4L2_CAP_STREAMING
-			| V4L2_CAP_DEVICE_CAPS;
-
-	cap->capabilities = cap->device_caps;
+			| V4L2_CAP_STREAMING;
+	/* 5.15: device_caps must equal vfd->device_caps; DEVICE_CAPS goes in capabilities */
+	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 
 	return 0;
 }
@@ -925,11 +924,11 @@ static int mfc_dec_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 		} else {
 			mfc_debug(2, "Src size = %d\n", buf->m.planes[0].bytesused);
 		}
-		ret = vb2_qbuf(&ctx->vq_src, buf);
+		ret = vb2_qbuf(&ctx->vq_src, NULL, buf);
 	} else {
 		mfc_debug(4, "dec dst buf[%d] Q\n", buf->index);
 		mfc_qos_update_framerate(ctx, buf->m.planes[0].bytesused, 1);
-		ret = vb2_qbuf(&ctx->vq_dst, buf);
+		ret = vb2_qbuf(&ctx->vq_dst, NULL, buf);
 	}
 
 	atomic_inc(&dev->queued_cnt);
@@ -1437,11 +1436,23 @@ static int mfc_dec_g_ext_ctrls(struct file *file, void *priv,
 	return ret;
 }
 
+/* 5.15 has no g_crop: VIDIOC_G_CROP reaches the driver as a selection */
+static int mfc_dec_g_selection(struct file *file, void *priv,
+		struct v4l2_selection *s)
+{
+	struct v4l2_crop cr = { .type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE };
+	int ret = mfc_dec_g_crop(file, priv, &cr);
+
+	if (!ret)
+		s->r = cr.c;
+	return ret;
+}
+
 /* v4l2_ioctl_ops */
 static const struct v4l2_ioctl_ops mfc_dec_ioctl_ops = {
 	.vidioc_querycap		= mfc_dec_querycap,
-	.vidioc_enum_fmt_vid_cap_mplane	= mfc_dec_enum_fmt_vid_cap_mplane,
-	.vidioc_enum_fmt_vid_out_mplane	= mfc_dec_enum_fmt_vid_out_mplane,
+	.vidioc_enum_fmt_vid_cap	= mfc_dec_enum_fmt_vid_cap_mplane,
+	.vidioc_enum_fmt_vid_out	= mfc_dec_enum_fmt_vid_out_mplane,
 	.vidioc_g_fmt_vid_cap_mplane	= mfc_dec_g_fmt_vid_cap_mplane,
 	.vidioc_g_fmt_vid_out_mplane	= mfc_dec_g_fmt_vid_out_mplane,
 	.vidioc_try_fmt_vid_cap_mplane	= mfc_dec_try_fmt,
@@ -1457,7 +1468,7 @@ static const struct v4l2_ioctl_ops mfc_dec_ioctl_ops = {
 	.vidioc_queryctrl		= mfc_dec_queryctrl,
 	.vidioc_g_ctrl			= mfc_dec_g_ctrl,
 	.vidioc_s_ctrl			= mfc_dec_s_ctrl,
-	.vidioc_g_crop			= mfc_dec_g_crop,
+	.vidioc_g_selection		= mfc_dec_g_selection,
 	.vidioc_g_ext_ctrls		= mfc_dec_g_ext_ctrls,
 };
 

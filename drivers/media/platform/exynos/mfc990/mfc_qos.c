@@ -888,8 +888,8 @@ static unsigned long framerate_table[][2] = {
 	{ 480000,     0 },
 };
 
-static inline unsigned long __mfc_qos_timeval_diff(struct timeval *to,
-					struct timeval *from)
+static inline unsigned long __mfc_qos_timeval_diff(struct __kernel_old_timeval *to,
+					struct __kernel_old_timeval *from)
 {
 	return (to->tv_sec * USEC_PER_SEC + to->tv_usec)
 		- (from->tv_sec * USEC_PER_SEC + from->tv_usec);
@@ -954,7 +954,7 @@ static int __mfc_qos_get_interval(struct list_head *head, struct list_head *entr
 }
 
 static int __mfc_qos_add_timestamp(struct mfc_ctx *ctx,
-			struct timeval *time, struct list_head *head)
+			struct __kernel_old_timeval *time, struct list_head *head)
 {
 	int replace_entry = 0;
 	struct mfc_timestamp *curr_ts = &ctx->ts_array[ctx->ts_count];
@@ -967,7 +967,7 @@ static int __mfc_qos_add_timestamp(struct mfc_ctx *ctx,
 			list_del(&curr_ts->list);
 	}
 
-	memcpy(&curr_ts->timestamp, time, sizeof(struct timeval));
+	memcpy(&curr_ts->timestamp, time, sizeof(struct __kernel_old_timeval));
 	if (!replace_entry)
 		list_add(&curr_ts->list, head);
 	curr_ts->interval =
@@ -983,7 +983,7 @@ static int __mfc_qos_add_timestamp(struct mfc_ctx *ctx,
 	return 0;
 }
 
-static unsigned long __mfc_qos_get_fps_by_timestamp(struct mfc_ctx *ctx, struct timeval *time)
+static unsigned long __mfc_qos_get_fps_by_timestamp(struct mfc_ctx *ctx, struct __kernel_old_timeval *time)
 {
 	struct list_head *head = &ctx->ts_list;
 	struct mfc_timestamp *temp_ts;
@@ -1187,7 +1187,7 @@ update_qos:
 
 void mfc_qos_update_last_framerate(struct mfc_ctx *ctx, u64 timestamp)
 {
-	struct timeval time;
+	struct __kernel_old_timeval time;
 
 	time.tv_sec = timestamp / NSEC_PER_SEC;
 	time.tv_usec = (timestamp - (time.tv_sec * NSEC_PER_SEC)) / NSEC_PER_USEC;

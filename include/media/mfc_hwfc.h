@@ -37,7 +37,7 @@ struct encoding_param {
  * repeater calls it to start encoding
  *
  */
-#ifdef CONFIG_VIDEO_EXYNOS_MFC
+#if defined(CONFIG_VIDEO_EXYNOS_MFC) || defined(CONFIG_VIDEO_EXYNOS990_MFC)
 int mfc_hwfc_encode(int buf_index, int job_id, struct encoding_param *param);
 #else
 static inline int mfc_hwfc_encode(int buf_index, int job_id, struct encoding_param *param)

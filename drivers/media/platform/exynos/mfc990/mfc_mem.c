@@ -16,7 +16,7 @@
 
 struct vb2_mem_ops *mfc_mem_ops(void)
 {
-	return (struct vb2_mem_ops *)&vb2_dma_sg_memops;
+	return (struct vb2_mem_ops *)&mfc_vb2_dma_sg_memops;
 }
 
 void mfc_mem_clean(struct mfc_dev *dev,
@@ -54,7 +54,7 @@ int mfc_mem_get_user_shared_handle(struct mfc_ctx *ctx,
 		goto dma_buf_size_fail;
 	}
 
-	handle->vaddr = dma_buf_vmap(handle->dma_buf);
+	handle->vaddr = mfc_dma_buf_vmap(handle->dma_buf);
 	if (handle->vaddr == NULL) {
 		mfc_err_ctx("Failed to get kernel virtual address\n");
 		ret = -EINVAL;
@@ -77,7 +77,7 @@ void mfc_mem_cleanup_user_shared_handle(struct mfc_ctx *ctx,
 		struct mfc_user_shared_handle *handle)
 {
 	if (handle->vaddr)
-		dma_buf_vunmap(handle->dma_buf, handle->vaddr);
+		mfc_dma_buf_vunmap(handle->dma_buf, handle->vaddr);
 	if (handle->dma_buf)
 		dma_buf_put(handle->dma_buf);
 
@@ -149,7 +149,7 @@ int mfc_mem_ion_alloc(struct mfc_dev *dev,
 		goto err_iovmm;
 	}
 
-	special_buf->vaddr = dma_buf_vmap(special_buf->dma_buf);
+	special_buf->vaddr = mfc_dma_buf_vmap(special_buf->dma_buf);
 	if (IS_ERR_OR_NULL(special_buf->vaddr)) {
 		mfc_err_dev("Failed to get vaddr (err 0x%p)\n",
 				&special_buf->vaddr);
@@ -181,7 +181,7 @@ void mfc_mem_ion_free(struct mfc_dev *dev,
 		struct mfc_special_buf *special_buf)
 {
 	if (special_buf->vaddr)
-		dma_buf_vunmap(special_buf->dma_buf, special_buf->vaddr);
+		mfc_dma_buf_vunmap(special_buf->dma_buf, special_buf->vaddr);
 	if (special_buf->daddr)
 		ion_iovmm_unmap(special_buf->attachment, special_buf->daddr);
 	if (special_buf->sgt)
@@ -226,7 +226,7 @@ int mfc_bufcon_get_daddr(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_raw_info *raw = &ctx->raw_buf;
 	int i, j = 0;
-	u32 mask;
+	u64 mask;
 
 	if (dmabuf_container_get_mask(bufcon_dmabuf, &mask)) {
 		mfc_err_ctx("[BUFCON] it is not buffer container\n");

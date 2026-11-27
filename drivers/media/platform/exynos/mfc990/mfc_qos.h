@@ -46,7 +46,7 @@ void mfc_qos_update_framerate(struct mfc_ctx *ctx, u32 bytesused,
 		int idle_trigger_only);
 void mfc_qos_update_last_framerate(struct mfc_ctx *ctx, u64 timestamp);
 
-static inline int __mfc_timeval_compare(const struct timeval *lhs, const struct timeval *rhs)
+static inline int __mfc_timeval_compare(const struct __kernel_old_timeval *lhs, const struct __kernel_old_timeval *rhs)
 {
 	if (lhs->tv_sec < rhs->tv_sec)
 		return -1;

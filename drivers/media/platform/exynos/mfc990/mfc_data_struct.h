@@ -913,8 +913,8 @@ struct mfc_perf {
 	void __iomem *regs_base0;
 	void __iomem *regs_base1;
 
-	struct timeval begin;
-	struct timeval end;
+	struct __kernel_old_timeval begin;
+	struct __kernel_old_timeval end;
 
 	int new_start;
 	int count;
@@ -1078,8 +1078,8 @@ struct mfc_dev {
 
 	int last_cmd;
 	int last_int;
-	struct timeval last_cmd_time;
-	struct timeval last_int_time;
+	struct __kernel_old_timeval last_cmd_time;
+	struct __kernel_old_timeval last_int_time;
 
 	struct mfc_perf perf;
 
@@ -1537,7 +1537,7 @@ struct hdr10_plus_meta {
 
 struct mfc_timestamp {
 	struct list_head list;
-	struct timeval timestamp;
+	struct __kernel_old_timeval timestamp;
 	int index;
 	int interval;
 };

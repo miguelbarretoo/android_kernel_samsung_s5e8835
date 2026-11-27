@@ -22,7 +22,7 @@ void mfc_llc_enable(struct mfc_dev *dev)
 	if (llc_disable)
 		return;
 
-	llc_region_alloc(LLC_REGION_MFC_DISPLAY, 1);
+	/* shortcut: no Exynos 990 LLC (SCI) driver on 5.15: status only, no cache ways */
 	dev->llc_on_status = 1;
 	mfc_info_dev("[LLC] enabled\n");
 	MFC_TRACE_DEV("[LLC] enabled\n");
@@ -34,7 +34,6 @@ void mfc_llc_disable(struct mfc_dev *dev)
 {
 	mfc_debug_dev_enter();
 
-	llc_region_alloc(LLC_REGION_MFC_DISPLAY, 0);
 	dev->llc_on_status = 0;
 	mfc_info_dev("[LLC] disabled\n");
 	MFC_TRACE_DEV("[LLC] disabled\n");
@@ -49,7 +48,6 @@ void mfc_llc_flush(struct mfc_dev *dev)
 	if (llc_disable)
 		return;
 
-	llc_flush(LLC_REGION_MFC_DISPLAY);
 	mfc_debug_dev(2, "[LLC] flushed\n");
 	MFC_TRACE_DEV("[LLC] flushed\n");
 

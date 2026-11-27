@@ -1,9 +1,8 @@
-config VIDEO_EXYNOS_MFC
-	bool "Exynos MFC Driver"
-	default n
-	depends on VIDEO_EXYNOS
+config VIDEO_EXYNOS990_MFC
+	bool "Exynos 990 MFC driver (4.19)"
+	depends on SOC_EXYNOS9830 && EXYNOS_IOVMM
 	select VIDEOBUF2_CORE
 	select VIDEOBUF2_DMA_SG
-	---help---
-	  MFC driver for V4L2.
-
+	help
+	  MFC video codec of Exynos 990 for the 4.19-era Codec2/OMX vendor HALs.
+	  The 5.15 mfc driver is for the newer core/ctx MFC.
