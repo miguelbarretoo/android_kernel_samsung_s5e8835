@@ -49,6 +49,8 @@ struct vb2_v4l2_buffer {
 	__u32			field;
 	struct v4l2_timecode	timecode;
 	__u32			sequence;
+	/* Exynos 990 vendor HALs pass per-buffer flags to the MFC in v4l2_buffer.reserved2 (4.19) */
+	__u32			reserved2;
 	__s32			request_fd;
 	bool			is_held;
 	struct vb2_plane	planes[VB2_MAX_PLANES];

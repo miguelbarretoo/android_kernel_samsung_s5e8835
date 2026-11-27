@@ -311,6 +311,7 @@ static int vb2_fill_vb2_v4l2_buffer(struct vb2_buffer *vb, struct v4l2_buffer *b
 
 	/* Zero flags that we handle */
 	vbuf->flags = b->flags & ~V4L2_BUFFER_MASK_FLAGS;
+	vbuf->reserved2 = b->reserved2;
 	if (!vb->vb2_queue->copy_timestamp || V4L2_TYPE_IS_CAPTURE(b->type)) {
 		/*
 		 * Non-COPY timestamps and non-OUTPUT queues will get
@@ -532,7 +533,7 @@ static void __fill_v4l2_buffer(struct vb2_buffer *vb, void *pb)
 	v4l2_buffer_set_timestamp(b, vb->timestamp);
 	b->timecode = vbuf->timecode;
 	b->sequence = vbuf->sequence;
-	b->reserved2 = 0;
+	b->reserved2 = vbuf->reserved2;
 	b->request_fd = 0;
 
 	if (q->is_multiplanar) {
