@@ -159,7 +159,7 @@ fi
 if [[ "$DTB_OPTION" == y ]]; then
 	BUILD_TARGETS=(dtbs)
 else
-	BUILD_TARGETS=(Image dtbs)
+	BUILD_TARGETS=(Image modules dtbs)
 fi
 
 #echo "Building: ${BUILD_TARGETS[*]}"
@@ -188,6 +188,27 @@ fi
 
 cp "$BUILD_OUT/arch/arm64/boot/Image" "$PACKAGE_OUT/Image"
 
+# GKI-style modules: first-stage init loads /lib/modules/modules.load from the
+# boot ramdisk. Only the modules listed for this model, plus what they depend
+# on, are packed, so the boot image keeps fitting its partition.
+MODULES_STAGE=""
+MODULES_LIST="build/modules/$MODEL.load"
+if [[ "$RECOVERY_OPTION" != y && -s "$MODULES_LIST" ]]; then
+	echo "Staging kernel modules from $MODULES_LIST..."
+	MODULES_STAGE="$(mktemp -d)"
+	trap 'rm -rf -- "$MODULES_STAGE"' EXIT
+	INSTALL="$MODULES_STAGE/install"
+	"${MAKE_ARGS[@]}" INSTALL_MOD_PATH="$INSTALL" INSTALL_MOD_STRIP=1 \
+		DEPMOD=true modules_install > /dev/null || abort
+	KREL="$(cat "$BUILD_OUT/include/config/kernel.release")"
+	depmod -b "$INSTALL" "$KREL" || abort
+	python3 build/modules/stage.py "$INSTALL/lib/modules/$KREL" "$MODULES_LIST" \
+		"$MODULES_STAGE/lib/modules" || abort
+	echo "Modules: $(grep -c . "$MODULES_STAGE/lib/modules/modules.load") listed," \
+		"$(ls "$MODULES_STAGE/lib/modules" | grep -c '\.ko$') packed"
+	echo "-----------------------------------------------"
+fi
+
 if [[ "$RECOVERY_OPTION" != y ]]; then
 	# Build ramdisk
     echo "Building RAMDisk..."
@@ -201,6 +222,7 @@ if [[ "$RECOVERY_OPTION" != y ]]; then
 		install -d -m 0755 "$RAMDISK_ROOT"/{dev,proc,sys,mnt,debug_ramdisk}
 		install -m 0750 build/ramdisk/init "$RAMDISK_ROOT/init"
 		install -m 0640 "$FSTAB" "$RAMDISK_ROOT/fstab.exynos990"
+		[[ -n "$MODULES_STAGE" ]] && cp -a "$MODULES_STAGE/lib" "$RAMDISK_ROOT/"
 		cd "$RAMDISK_ROOT"
 		find . -mindepth 1 -exec touch -h -d '@0' {} +
 		find . -mindepth 1 -print0 | LC_ALL=C sort -z |

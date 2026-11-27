@@ -1,0 +1,5 @@
+# Modules first-stage init loads on x1slte, in order (dependencies are
+# resolved from modules.dep and packed automatically). Add a module here only
+# after it has been checked against the Exynos 990: many =m drivers in this
+# tree are for s5e8835 hardware.
+zram
